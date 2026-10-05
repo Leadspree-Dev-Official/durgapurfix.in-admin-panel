@@ -4,8 +4,10 @@ import {
   Settings, Image, ShieldAlert, FileText, Globe, Check, Camera, 
   Sparkles, ShieldCheck, Database, RefreshCw, CheckCircle2, AlertCircle,
   Smartphone, Copy, CheckCheck, Code2, CloudUpload, ChevronDown, ChevronUp,
-  Layers, BookOpen, Laptop, Radio
+  Layers, BookOpen, Laptop, Radio, Headphones, PhoneCall, MessageSquare, 
+  HelpCircle, FileCheck, ExternalLink, Plus, Trash2, Eye, ChevronRight
 } from 'lucide-react';
+import { HelpCenterFAQ, HelpCenterSettings } from '../types';
 import { checkBackendConnection, BackendConnectionResult } from '../lib/firebase';
 import { pushAllSeedDataToFirestore, SyncProgress } from '../lib/firestoreSync';
 import rawFirebaseConfig from '../../firebase-applet-config.json';
@@ -63,6 +65,14 @@ export default function SettingsView({
   const [isSyncingCloud, setIsSyncingCloud] = useState(false);
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
   const [syncResult, setSyncResult] = useState<{ success: boolean; count: number; message: string } | null>(null);
+
+  // Policy & Help Center Sub-Tabs
+  const [policySubTab, setPolicySubTab] = useState<'help' | 'refund' | 'terms' | 'privacy' | 'about' | 'receipt'>('help');
+  const [activePreviewDoc, setActivePreviewDoc] = useState<'help' | 'refund' | 'terms' | null>(null);
+  const [newFaqQ, setNewFaqQ] = useState('');
+  const [newFaqA, setNewFaqA] = useState('');
+  const [newFaqCategory, setNewFaqCategory] = useState('Bookings');
+  const [showAddFaq, setShowAddFaq] = useState(false);
 
   const copyToClipboard = (text: string, keyName: string) => {
     navigator.clipboard.writeText(text);
@@ -155,6 +165,41 @@ export default function SettingsView({
       ...prev,
       policyPages: { ...prev.policyPages, [field]: value }
     }));
+  };
+
+  const updateHelpCenter = (field: keyof HelpCenterSettings, value: any) => {
+    setLocalSettings(prev => ({
+      ...prev,
+      helpCenter: {
+        supportPhone: prev.helpCenter?.supportPhone || '+91 9434 221100',
+        supportEmail: prev.helpCenter?.supportEmail || 'support@durgapurfix.com',
+        whatsappNumber: prev.helpCenter?.whatsappNumber || '+91 9434 221100',
+        supportHours: prev.helpCenter?.supportHours || '8:00 AM - 9:00 PM (Monday - Sunday)',
+        helpDeskMessage: prev.helpCenter?.helpDeskMessage || 'Need quick help with your service booking?',
+        faqs: prev.helpCenter?.faqs || [],
+        [field]: value
+      }
+    }));
+  };
+
+  const handleAddFaq = () => {
+    if (!newFaqQ.trim() || !newFaqA.trim()) return;
+    const newFaq: HelpCenterFAQ = {
+      id: 'faq-' + Date.now(),
+      question: newFaqQ.trim(),
+      answer: newFaqA.trim(),
+      category: newFaqCategory
+    };
+    const currentFaqs = localSettings.helpCenter?.faqs || [];
+    updateHelpCenter('faqs', [...currentFaqs, newFaq]);
+    setNewFaqQ('');
+    setNewFaqA('');
+    setShowAddFaq(false);
+  };
+
+  const handleDeleteFaq = (faqId: string) => {
+    const currentFaqs = localSettings.helpCenter?.faqs || [];
+    updateHelpCenter('faqs', currentFaqs.filter(f => f.id !== faqId));
   };
 
   const updateSeo = (field: keyof SystemSettings['seo'], value: any) => {
@@ -993,69 +1038,503 @@ db.collection("orders").addSnapshotListener { snapshot, e ->
             </div>
           )}
 
-          {/* POLICY PAGES */}
+          {/* POLICY & HELP CENTER PAGES */}
           {isPolicy && (
-            <div className="space-y-4" id="settings-policy-form">
-              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2 mb-4">
-                <FileText className="w-4.5 h-4.5 text-blue-600" />
-                <span>Client & Provider Policy Agreements</span>
-              </h3>
-
-              <div>
-                <label className="block text-slate-600 text-xs font-bold mb-1.5">About Us Summary</label>
-                <textarea
-                  value={localSettings.policyPages.aboutUs}
-                  onChange={(e) => updatePolicy('aboutUs', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition h-24 resize-none leading-relaxed"
-                  required
-                />
+            <div className="space-y-6" id="settings-policy-form">
+              {/* Policy Sub-Tabs */}
+              <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-none border border-slate-200 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setPolicySubTab('help')}
+                  className={`px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 shrink-0 ${
+                    policySubTab === 'help' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Headphones className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Help Center & Support</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPolicySubTab('refund')}
+                  className={`px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 shrink-0 ${
+                    policySubTab === 'refund' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <FileCheck className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Refund Policy</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPolicySubTab('terms')}
+                  className={`px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 shrink-0 ${
+                    policySubTab === 'terms' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5 text-purple-500" />
+                  <span>Terms & Conditions</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPolicySubTab('privacy')}
+                  className={`px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 shrink-0 ${
+                    policySubTab === 'privacy' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Privacy Policy</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPolicySubTab('about')}
+                  className={`px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 shrink-0 ${
+                    policySubTab === 'about' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-blue-500" />
+                  <span>About Us</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPolicySubTab('receipt')}
+                  className={`px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 shrink-0 ${
+                    policySubTab === 'receipt' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Code2 className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Invoice Terms</span>
+                </button>
               </div>
 
-              <div>
-                <label className="block text-slate-600 text-xs font-bold mb-1.5">Platform Terms & Conditions</label>
-                <textarea
-                  value={localSettings.policyPages.termsConditions}
-                  onChange={(e) => updatePolicy('termsConditions', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition h-24 resize-none leading-relaxed"
-                  required
-                />
-              </div>
+              {/* 1. HELP CENTER & SUPPORT */}
+              {policySubTab === 'help' && (
+                <div className="space-y-5 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                        <Headphones className="w-4 h-4 text-rose-500" />
+                        <span>Customer Help Center & Support Contact Details</span>
+                      </h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        These details appear directly under the Help Center button in the customer mobile app.
+                      </p>
+                    </div>
+                  </div>
 
-              <div>
-                <label className="block text-slate-600 text-xs font-bold mb-1.5">Privacy & Information Policy</label>
-                <textarea
-                  value={localSettings.policyPages.privacyPolicy}
-                  onChange={(e) => updatePolicy('privacyPolicy', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition h-24 resize-none leading-relaxed"
-                  required
-                />
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-600 text-xs font-bold mb-1.5 flex items-center gap-1.5">
+                        <PhoneCall className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Customer Helpline Number</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={localSettings.helpCenter?.supportPhone || localSettings.general.contactPhone}
+                        onChange={(e) => updateHelpCenter('supportPhone', e.target.value)}
+                        placeholder="+91 9434 221100"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 font-bold focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20"
+                      />
+                    </div>
 
-              <div>
-                <label className="block text-slate-600 text-xs font-bold mb-1.5">Disputes & Refund Policy</label>
-                <textarea
-                  value={localSettings.policyPages.refundPolicy}
-                  onChange={(e) => updatePolicy('refundPolicy', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition h-24 resize-none leading-relaxed"
-                  required
-                />
-              </div>
+                    <div>
+                      <label className="block text-slate-600 text-xs font-bold mb-1.5 flex items-center gap-1.5">
+                        <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>WhatsApp Support Chat Number</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={localSettings.helpCenter?.whatsappNumber || localSettings.general.contactPhone}
+                        onChange={(e) => updateHelpCenter('whatsappNumber', e.target.value)}
+                        placeholder="+91 9434 221100"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 font-bold focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20"
+                      />
+                    </div>
 
-              <div className="pt-2 border-t border-slate-200/80">
-                <label className="block text-slate-800 text-xs font-extrabold mb-1 flex items-center justify-between">
-                  <span>Receipt & Tax Invoice Terms & Conditions</span>
-                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">Appears on Customer Invoices & PDFs</span>
-                </label>
-                <p className="text-slate-500 text-[11px] font-medium mb-2">
-                  Customize the warranty clause, contact info, and legal notes displayed at the bottom of generated receipts and PDF downloads.
+                    <div>
+                      <label className="block text-slate-600 text-xs font-bold mb-1.5">Support Desk Email</label>
+                      <input
+                        type="email"
+                        value={localSettings.helpCenter?.supportEmail || localSettings.general.contactEmail}
+                        onChange={(e) => updateHelpCenter('supportEmail', e.target.value)}
+                        placeholder="support@durgapurfix.com"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-600 text-xs font-bold mb-1.5">Support Desk Operating Hours</label>
+                      <input
+                        type="text"
+                        value={localSettings.helpCenter?.supportHours || '8:00 AM - 9:00 PM (Monday - Sunday)'}
+                        onChange={(e) => updateHelpCenter('supportHours', e.target.value)}
+                        placeholder="8:00 AM - 9:00 PM (Monday - Sunday)"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-600 text-xs font-bold mb-1.5">Help Desk Banner & Welcome Message</label>
+                    <textarea
+                      value={localSettings.helpCenter?.helpDeskMessage || 'Need quick help with your service booking, pricing, or technician arrival? Our local support team in Durgapur is here for you.'}
+                      onChange={(e) => updateHelpCenter('helpDeskMessage', e.target.value)}
+                      rows={2}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-800 font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                  </div>
+
+                  {/* Frequently Asked Questions (FAQs) */}
+                  <div className="pt-3 border-t border-slate-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-extrabold text-slate-800 block flex items-center gap-1.5">
+                          <HelpCircle className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Help Center FAQs ({(localSettings.helpCenter?.faqs || []).length})</span>
+                        </span>
+                        <span className="text-[10px] text-slate-400">Questions displayed in customer help accordion</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddFaq(!showAddFaq)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold border border-blue-200 transition cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add FAQ Question</span>
+                      </button>
+                    </div>
+
+                    {showAddFaq && (
+                      <div className="p-4 bg-blue-50/40 border border-blue-200 rounded-xl space-y-3 animate-in fade-in duration-150">
+                        <span className="text-xs font-bold text-blue-900 block">Create Help Question & Answer</span>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-600 mb-1">Question *</label>
+                          <input
+                            type="text"
+                            value={newFaqQ}
+                            onChange={(e) => setNewFaqQ(e.target.value)}
+                            placeholder="e.g. How do I get an invoice for my service?"
+                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold text-slate-800"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-600 mb-1">Answer *</label>
+                          <textarea
+                            value={newFaqA}
+                            onChange={(e) => setNewFaqA(e.target.value)}
+                            placeholder="Detailed answer provided to customer..."
+                            rows={2}
+                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 font-medium"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between pt-1">
+                          <select
+                            value={newFaqCategory}
+                            onChange={(e) => setNewFaqCategory(e.target.value)}
+                            className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-700"
+                          >
+                            <option value="Bookings">Bookings & Tracking</option>
+                            <option value="Warranty & Quality">Warranty & Quality</option>
+                            <option value="Cancellations">Cancellations & Refunds</option>
+                            <option value="Payments">Payments & Invoicing</option>
+                          </select>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowAddFaq(false)}
+                              className="px-3 py-1 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-100"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleAddFaq}
+                              className="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow-2xs"
+                            >
+                              Save Question
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      {(localSettings.helpCenter?.faqs || []).map((faq) => (
+                        <div key={faq.id} className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="text-xs font-extrabold text-slate-800">
+                              Q: {faq.question}
+                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-200 text-slate-600">
+                                {faq.category || 'General'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteFaq(faq.id)}
+                                className="text-slate-400 hover:text-red-600 p-1"
+                                title="Delete FAQ"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                          <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                            A: {faq.answer}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 2. REFUND POLICY */}
+              {policySubTab === 'refund' && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                      <FileCheck className="w-4 h-4 text-amber-500" />
+                      <span>Disputes & Customer Refund Policy</span>
+                    </h4>
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 text-xs font-bold mb-1.5">
+                      Refund Guidelines, Timelines & Inspection Process
+                    </label>
+                    <textarea
+                      value={localSettings.policyPages.refundPolicy}
+                      onChange={(e) => updatePolicy('refundPolicy', e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-800 font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition h-48 resize-none leading-relaxed"
+                      placeholder="Specify your refund policy terms..."
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* 3. TERMS & CONDITIONS */}
+              {policySubTab === 'terms' && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-purple-500" />
+                      <span>Platform Terms of Service & User Agreements</span>
+                    </h4>
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 text-xs font-bold mb-1.5">
+                      Platform Terms & Conditions
+                    </label>
+                    <textarea
+                      value={localSettings.policyPages.termsConditions}
+                      onChange={(e) => updatePolicy('termsConditions', e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-800 font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition h-48 resize-none leading-relaxed"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* 4. PRIVACY POLICY */}
+              {policySubTab === 'privacy' && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                      <span>Customer & Partner Privacy Policy</span>
+                    </h4>
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 text-xs font-bold mb-1.5">
+                      Privacy & Data Protection Clauses
+                    </label>
+                    <textarea
+                      value={localSettings.policyPages.privacyPolicy}
+                      onChange={(e) => updatePolicy('privacyPolicy', e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-800 font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition h-48 resize-none leading-relaxed"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* 5. ABOUT US */}
+              {policySubTab === 'about' && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-blue-500" />
+                      <span>About Durgapur Fix Aggregator Summary</span>
+                    </h4>
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 text-xs font-bold mb-1.5">
+                      About Us Summary
+                    </label>
+                    <textarea
+                      value={localSettings.policyPages.aboutUs}
+                      onChange={(e) => updatePolicy('aboutUs', e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-800 font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition h-40 resize-none leading-relaxed"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* 6. RECEIPT TERMS */}
+              {policySubTab === 'receipt' && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                      <Code2 className="w-4 h-4 text-indigo-500" />
+                      <span>Official Tax Invoice & Receipt Terms</span>
+                    </h4>
+                  </div>
+                  <div>
+                    <label className="block text-slate-800 text-xs font-extrabold mb-1">
+                      Warranty & Invoice Footnotes (Appears on Customer Bills & PDFs)
+                    </label>
+                    <textarea
+                      value={localSettings.policyPages.receiptTerms || ''}
+                      onChange={(e) => updatePolicy('receiptTerms', e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition h-32 resize-none leading-relaxed"
+                      placeholder="1. All home service warranties are valid for 30 days..."
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* LIVE CUSTOMER MOBILE APP PREVIEW CARD (Matching user's uploaded screenshot) */}
+              <div className="mt-6 p-5 bg-slate-900 text-white rounded-2xl border border-slate-800 shadow-md space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-200">
+                      Live Customer Mobile App Screen Preview
+                    </span>
+                  </div>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold border border-emerald-500/30">
+                    Matches Customer Account View
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-slate-400">
+                  Click any menu row below to test how customer apps render your live database content:
                 </p>
-                <textarea
-                  value={localSettings.policyPages.receiptTerms || ''}
-                  onChange={(e) => updatePolicy('receiptTerms', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition h-28 resize-none leading-relaxed"
-                  placeholder="1. All home service warranties are valid for 30 days from completion date..."
-                  required
-                />
+
+                {/* Mobile Menu List Items (Matching exact screenshot items) */}
+                <div className="bg-white rounded-2xl p-2 text-slate-800 divide-y divide-slate-100 shadow-inner">
+                  {/* Help Center Item */}
+                  <button
+                    type="button"
+                    onClick={() => setActivePreviewDoc('help')}
+                    className="w-full flex items-center justify-between p-3.5 hover:bg-slate-50 rounded-xl transition text-left cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 shrink-0">
+                        <Headphones className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-extrabold text-slate-900 group-hover:text-red-600 transition">Help Center</h5>
+                        <p className="text-[11px] text-slate-400 font-medium">Get help & support</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 transition" />
+                  </button>
+
+                  {/* Refund Policy Item */}
+                  <button
+                    type="button"
+                    onClick={() => setActivePreviewDoc('refund')}
+                    className="w-full flex items-center justify-between p-3.5 hover:bg-slate-50 rounded-xl transition text-left cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-500 shrink-0">
+                        <FileCheck className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-extrabold text-slate-900 group-hover:text-amber-600 transition">Refund Policy</h5>
+                        <p className="text-[11px] text-slate-400 font-medium">Learn about our refund policy</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 transition" />
+                  </button>
+
+                  {/* Terms & Conditions Item */}
+                  <button
+                    type="button"
+                    onClick={() => setActivePreviewDoc('terms')}
+                    className="w-full flex items-center justify-between p-3.5 hover:bg-slate-50 rounded-xl transition text-left cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-500 shrink-0">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-extrabold text-slate-900 group-hover:text-purple-600 transition">Terms & Conditions</h5>
+                        <p className="text-[11px] text-slate-400 font-medium">Read our terms & conditions</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 transition" />
+                  </button>
+                </div>
+
+                {/* Interactive Modal Drawer when clicked */}
+                {activePreviewDoc && (
+                  <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 space-y-3 animate-in fade-in duration-150">
+                    <div className="flex items-center justify-between border-b border-slate-700 pb-2">
+                      <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                        {activePreviewDoc === 'help' && '🎧 Customer Help Center View'}
+                        {activePreviewDoc === 'refund' && '📋 Customer Refund Policy View'}
+                        {activePreviewDoc === 'terms' && '📄 Customer Terms & Conditions View'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActivePreviewDoc(null)}
+                        className="text-slate-400 hover:text-white text-xs font-bold"
+                      >
+                        Close Preview
+                      </button>
+                    </div>
+
+                    {activePreviewDoc === 'help' && (
+                      <div className="text-xs text-slate-300 space-y-3">
+                        <p className="text-[11px] text-slate-300 italic">{localSettings.helpCenter?.helpDeskMessage}</p>
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          <div className="p-2 bg-slate-900 rounded-lg border border-slate-700">
+                            <span className="text-slate-400 block text-[9px] uppercase font-bold">Helpline</span>
+                            <span className="font-extrabold text-white">{localSettings.helpCenter?.supportPhone}</span>
+                          </div>
+                          <div className="p-2 bg-slate-900 rounded-lg border border-slate-700">
+                            <span className="text-slate-400 block text-[9px] uppercase font-bold">WhatsApp</span>
+                            <span className="font-extrabold text-emerald-400">{localSettings.helpCenter?.whatsappNumber}</span>
+                          </div>
+                        </div>
+                        <div className="space-y-1 pt-1">
+                          <span className="text-[10px] uppercase font-extrabold text-slate-400">Sample FAQ Accordion:</span>
+                          {(localSettings.helpCenter?.faqs || []).slice(0, 2).map(f => (
+                            <div key={f.id} className="p-2 bg-slate-900/60 rounded-lg text-[11px]">
+                              <span className="font-bold text-white block">Q: {f.question}</span>
+                              <span className="text-slate-400 mt-0.5 block">{f.answer}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {activePreviewDoc === 'refund' && (
+                      <div className="text-xs text-slate-300 whitespace-pre-line max-h-40 overflow-y-auto leading-relaxed bg-slate-900/50 p-3 rounded-xl border border-slate-700/60">
+                        {localSettings.policyPages.refundPolicy}
+                      </div>
+                    )}
+
+                    {activePreviewDoc === 'terms' && (
+                      <div className="text-xs text-slate-300 whitespace-pre-line max-h-40 overflow-y-auto leading-relaxed bg-slate-900/50 p-3 rounded-xl border border-slate-700/60">
+                        {localSettings.policyPages.termsConditions}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

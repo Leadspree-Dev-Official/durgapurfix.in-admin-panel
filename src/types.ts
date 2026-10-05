@@ -240,6 +240,22 @@ export interface LoginLog {
   date: string;
 }
 
+export interface HelpCenterFAQ {
+  id: string;
+  question: string;
+  answer: string;
+  category?: string;
+}
+
+export interface HelpCenterSettings {
+  supportPhone: string;
+  supportEmail: string;
+  whatsappNumber: string;
+  supportHours: string;
+  helpDeskMessage: string;
+  faqs: HelpCenterFAQ[];
+}
+
 export interface SystemSettings {
   general: {
     siteName: string;
@@ -264,6 +280,7 @@ export interface SystemSettings {
     kycMandatory: boolean;
   };
   appointmentSettings?: AppointmentSettings;
+  helpCenter?: HelpCenterSettings;
   policyPages: {
     aboutUs: string;
     termsConditions: string;

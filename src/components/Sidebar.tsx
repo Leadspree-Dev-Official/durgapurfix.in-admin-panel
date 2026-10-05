@@ -3,7 +3,7 @@ import {
   LayoutDashboard, FolderTree, Tags, MapPin, Ticket, Layers, Star, 
   Settings, Users, ShieldAlert, CreditCard, Landmark, FileBarChart2, 
   ChevronDown, ChevronRight, LogOut, Menu, X, UserCheck, Briefcase, 
-  Grid, Bell, ShieldCheck, Camera, Globe, ArrowUpRight, Database, Calendar
+  Grid, Bell, ShieldCheck, Camera, Globe, ArrowUpRight, Database, Calendar, Headphones
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { getDefaultAvatar } from '../data/avengers';
@@ -228,6 +228,13 @@ export default function Sidebar({
       allowedRoles: ['admin', 'executive']
     },
     {
+      id: 'help-policy-center',
+      label: 'Help & Policy Center',
+      icon: Headphones,
+      view: 'settings-policy',
+      allowedRoles: ['admin', 'executive']
+    },
+    {
       id: 'cloud-db',
       label: 'Cloud Backend & Sync',
       icon: Database,
@@ -241,10 +248,10 @@ export default function Sidebar({
       icon: Settings,
       subMenus: [
         { label: 'General Setting', view: 'settings-general' },
+        { label: 'Help & Policy Center', view: 'settings-policy' },
         { label: 'Appointment & Slots', view: 'appointment-settings' },
         { label: 'Logo & Favicon', view: 'settings-logo' },
         { label: 'System Configuration', view: 'settings-config' },
-        { label: 'Policy Pages', view: 'settings-policy' },
         { label: 'SEO Configuration', view: 'settings-seo' }
       ],
       allowedRoles: ['admin'] // Strictly Admin-only configuration settings

@@ -760,6 +760,39 @@ export const defaultSettings: SystemSettings = {
       { id: 'slot-6', startTime: '06:00 PM', endTime: '08:00 PM', label: '06:00 PM - 08:00 PM', isActive: true, maxCapacity: 8 }
     ]
   },
+  helpCenter: {
+    supportPhone: '+91 9434 221100',
+    supportEmail: 'support@durgapurfix.com',
+    whatsappNumber: '+91 9434 221100',
+    supportHours: '8:00 AM - 9:00 PM (Monday - Sunday)',
+    helpDeskMessage: 'Need quick help with your service booking, pricing, or technician arrival? Our local support team in Durgapur is here for you.',
+    faqs: [
+      {
+        id: 'faq-1',
+        question: 'How do I track my technician\'s arrival in Durgapur?',
+        answer: 'Once your booking is confirmed, you will receive real-time status updates and SMS/Push notifications. You can also view the assigned technician\'s name and contact number directly under your My Orders screen.',
+        category: 'Bookings'
+      },
+      {
+        id: 'faq-2',
+        question: 'How does the 30-Day Service Warranty work?',
+        answer: 'All repair and servicing work completed through Durgapur Fix comes with a 30-day service warranty. If the same issue recurs within 30 days, we will send a technician for inspection free of charge.',
+        category: 'Warranty & Quality'
+      },
+      {
+        id: 'faq-3',
+        question: 'Can I reschedule or cancel my appointment?',
+        answer: 'Yes! You can reschedule or cancel your appointment free of charge up to 2 hours prior to your scheduled arrival time window via the app or by calling our Help Center.',
+        category: 'Cancellations'
+      },
+      {
+        id: 'faq-4',
+        question: 'What payment methods are supported?',
+        answer: 'We accept Cash After Service (COD), UPI (Google Pay, PhonePe, Paytm), Net Banking, and Debit/Credit cards.',
+        category: 'Payments'
+      }
+    ]
+  },
   policyPages: {
     aboutUs: 'Durgapur Fix is the premier home service aggregator platform operating locally in the beautiful steel city of Durgapur. Our mission is to bridge the gap between quality domestic service professionals and homeowners, providing a reliable, safe, and professional experience.',
     termsConditions: 'All service providers registered with Durgapur Fix must abide by the local guidelines, maintain high safety standards, and present genuine KYC documentation before starting jobs. Payments are handled via secure online methods or direct COD as approved by the admin team.',
