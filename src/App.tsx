@@ -33,6 +33,8 @@ import ProviderPortal from './components/ProviderPortal';
 import ProfilePhotoModal from './components/ProfilePhotoModal';
 import ItemizedBillModal from './components/ItemizedBillModal';
 import MobileBottomNav from './components/MobileBottomNav';
+import PushNotificationCenter from './components/PushNotificationCenter';
+import AppointmentSettingsView from './components/AppointmentSettingsView';
 import { getDefaultAvatar, DEFAULT_MAN_AVATAR } from './data/avengers';
 import { db, auth } from './lib/firebase';
 import { doc, getDocFromServer, onSnapshot } from 'firebase/firestore';
@@ -235,6 +237,44 @@ export default function App() {
         }
       }));
 
+      // Listen to Android Mobile App bookings collection (durgapur_bookings)
+      unsubs.push(subscribeToCollection<any>('durgapur_bookings', (mobileBookings) => {
+        if (mobileBookings && mobileBookings.length > 0) {
+          setOrders((prevOrders) => {
+            const map = new Map<string, Order>();
+            // Keep existing orders
+            prevOrders.forEach(o => map.set(o.id, o));
+            // Merge mobile bookings
+            mobileBookings.forEach((b: any) => {
+              const formattedOrder: Order = {
+                id: b.id || b.bookingId || `mb_${Date.now()}`,
+                customerName: b.customerName || b.userName || 'App Customer',
+                customerPhone: b.customerPhone || b.phone || '9832100000',
+                customerEmail: b.customerEmail || b.email || 'customer@durgapurfix.in',
+                serviceName: b.serviceName || b.category || 'Home Service',
+                serviceId: b.serviceId || 'srv-1',
+                zone: b.zone || b.location || 'City Centre Zone',
+                address: b.customerAddress || b.address || 'Durgapur, WB',
+                date: b.date || b.bookingDate || new Date().toISOString().split('T')[0],
+                timeSlot: b.timeSlot || b.time || '10:00 AM - 12:00 PM',
+                status: b.status || 'pending',
+                amount: Number(b.amount || b.price || b.totalAmount || 399),
+                paymentStatus: b.paymentStatus || 'pending',
+                paymentMode: b.paymentMode || b.paymentMethod || 'Cash',
+                providerId: b.providerId || b.technicianId,
+                providerName: b.providerName || b.technicianName,
+                complaint: b.complaint || b.notes || b.instructions,
+                createdAt: b.createdAt || new Date().toISOString()
+              };
+              map.set(formattedOrder.id, formattedOrder);
+            });
+            const merged = Array.from(map.values());
+            localStorage.setItem('durgapur_orders', JSON.stringify(merged));
+            return merged;
+          });
+        }
+      }));
+
       unsubs.push(subscribeToCollection<CustomerUser>('users', (items) => {
         if (items && items.length > 0) {
           setUsers(items);
@@ -246,6 +286,13 @@ export default function App() {
         if (items && items.length > 0) {
           setProviders(items);
           localStorage.setItem('durgapur_providers', JSON.stringify(items));
+        }
+      }));
+
+      unsubs.push(subscribeToCollection<UserNotification>('notifications', (items) => {
+        if (items && items.length > 0) {
+          setNotifications(items);
+          localStorage.setItem('durgapur_notifications', JSON.stringify(items));
         }
       }));
 
@@ -473,6 +520,28 @@ export default function App() {
           onUpdateOrders={(updatedOrders) => updateAndPersist('orders', updatedOrders, setOrders)}
           onUpdateProviders={(updatedProviders) => updateAndPersist('providers', updatedProviders, setProviders)}
           onViewBill={(order) => setBillModalOrder(order)}
+        />
+      );
+    }
+
+    if (activeView === 'notifications-center' || activeView === 'users-notify' || activeView === 'providers-notify') {
+      return (
+        <PushNotificationCenter 
+          notifications={notifications}
+          users={users}
+          providers={providers}
+          zones={zones}
+          currentUserEmail={session.email}
+          onUpdateNotifications={(updatedNotifs) => updateAndPersist('notifications', updatedNotifs, setNotifications)}
+        />
+      );
+    }
+
+    if (activeView === 'appointment-settings') {
+      return (
+        <AppointmentSettingsView 
+          settings={settings}
+          onUpdateSettings={(updatedSettings) => updateAndPersist('settings', updatedSettings, setSettings)}
         />
       );
     }

@@ -3,7 +3,7 @@ import {
   LayoutDashboard, FolderTree, Tags, MapPin, Ticket, Layers, Star, 
   Settings, Users, ShieldAlert, CreditCard, Landmark, FileBarChart2, 
   ChevronDown, ChevronRight, LogOut, Menu, X, UserCheck, Briefcase, 
-  Grid, Bell, ShieldCheck, Camera, Globe, ArrowUpRight, Database
+  Grid, Bell, ShieldCheck, Camera, Globe, ArrowUpRight, Database, Calendar
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { getDefaultAvatar } from '../data/avengers';
@@ -213,6 +213,21 @@ export default function Sidebar({
       allowedRoles: ['admin']
     },
     {
+      id: 'notifications-center',
+      label: 'Push Notifications',
+      icon: Bell,
+      view: 'notifications-center',
+      allowedRoles: ['admin', 'executive'],
+      badge: 'Live'
+    },
+    {
+      id: 'appointment-settings',
+      label: 'Appointment & Slots',
+      icon: Calendar,
+      view: 'appointment-settings',
+      allowedRoles: ['admin', 'executive']
+    },
+    {
       id: 'cloud-db',
       label: 'Cloud Backend & Sync',
       icon: Database,
@@ -226,6 +241,7 @@ export default function Sidebar({
       icon: Settings,
       subMenus: [
         { label: 'General Setting', view: 'settings-general' },
+        { label: 'Appointment & Slots', view: 'appointment-settings' },
         { label: 'Logo & Favicon', view: 'settings-logo' },
         { label: 'System Configuration', view: 'settings-config' },
         { label: 'Policy Pages', view: 'settings-policy' },

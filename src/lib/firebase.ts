@@ -1,14 +1,25 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore, doc, getDocFromServer } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
-import firebaseConfig from '../../firebase-applet-config.json';
+import rawConfig from '../../firebase-applet-config.json';
+
+const firebaseConfig = {
+  apiKey: import.meta.env?.VITE_FIREBASE_API_KEY || rawConfig?.apiKey || '',
+  authDomain: import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN || rawConfig?.authDomain || '',
+  projectId: import.meta.env?.VITE_FIREBASE_PROJECT_ID || rawConfig?.projectId || '',
+  storageBucket: import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET || rawConfig?.storageBucket || '',
+  messagingSenderId: import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID || rawConfig?.messagingSenderId || '',
+  appId: import.meta.env?.VITE_FIREBASE_APP_ID || rawConfig?.appId || '',
+  measurementId: import.meta.env?.VITE_FIREBASE_MEASUREMENT_ID || rawConfig?.measurementId || '',
+  firestoreDatabaseId: import.meta.env?.VITE_FIREBASE_DATABASE_ID || rawConfig?.firestoreDatabaseId || '(default)'
+};
 
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
 let auth: Auth | null = null;
 
 try {
-  if (firebaseConfig && firebaseConfig.projectId) {
+  if (firebaseConfig.projectId) {
     app = getApps().length > 0 ? getApp() : initializeApp({
       apiKey: firebaseConfig.apiKey,
       authDomain: firebaseConfig.authDomain,

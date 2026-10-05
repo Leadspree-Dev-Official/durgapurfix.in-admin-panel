@@ -9,8 +9,16 @@ export interface SyncProgress {
   currentCollection: string;
 }
 
+// Map portal collection to mobile app alias collection
+const MOBILE_COLLECTION_MAP: Record<string, string> = {
+  orders: 'durgapur_bookings',
+  categories: 'durgapur_categories',
+  providers: 'durgapur_professionals',
+  sliders: 'durgapur_sliders'
+};
+
 /**
- * Push an entire dataset to Firestore in batches
+ * Push an entire dataset to Firestore in batches (syncs both Web & Android collections)
  */
 export async function pushAllSeedDataToFirestore(
   data: {
@@ -34,13 +42,17 @@ export async function pushAllSeedDataToFirestore(
   try {
     const collectionsToSync: { name: string; items: any[]; isSingleDoc?: boolean }[] = [
       { name: 'categories', items: data.categories },
+      { name: 'durgapur_categories', items: data.categories },
       { name: 'subcategories', items: data.subcategories },
       { name: 'zones', items: data.zones },
       { name: 'coupons', items: data.coupons },
       { name: 'sliders', items: data.sliders },
+      { name: 'durgapur_sliders', items: data.sliders },
       { name: 'services', items: data.services },
       { name: 'providers', items: data.providers },
+      { name: 'durgapur_professionals', items: data.providers },
       { name: 'orders', items: data.orders },
+      { name: 'durgapur_bookings', items: data.orders },
       { name: 'users', items: data.users },
       { name: 'settings', items: [data.settings], isSingleDoc: true }
     ];
@@ -97,13 +109,25 @@ export async function pushAllSeedDataToFirestore(
 }
 
 /**
- * Update or insert a single document in Firestore
+ * Update or insert a single document in Firestore (with dual-sync for mobile collections)
  */
 export async function syncDocToFirestore(collectionName: string, docId: string, data: any): Promise<boolean> {
   if (!db) return false;
   try {
     const docRef = doc(db, collectionName, String(docId));
     await setDoc(docRef, data, { merge: true });
+
+    // Mirror to mobile alias collection if mapped
+    const mobileAlias = MOBILE_COLLECTION_MAP[collectionName];
+    if (mobileAlias) {
+      try {
+        const aliasRef = doc(db, mobileAlias, String(docId));
+        await setDoc(aliasRef, data, { merge: true });
+      } catch (aliasErr) {
+        console.warn(`Dual sync to ${mobileAlias} warning:`, aliasErr);
+      }
+    }
+
     return true;
   } catch (e) {
     console.error(`Error syncing ${collectionName}/${docId} to Firestore:`, e);
@@ -112,13 +136,25 @@ export async function syncDocToFirestore(collectionName: string, docId: string, 
 }
 
 /**
- * Remove a document from Firestore
+ * Remove a document from Firestore (with dual-delete for mobile collections)
  */
 export async function removeDocFromFirestore(collectionName: string, docId: string): Promise<boolean> {
   if (!db) return false;
   try {
     const docRef = doc(db, collectionName, String(docId));
     await deleteDoc(docRef);
+
+    // Mirror delete to mobile alias collection if mapped
+    const mobileAlias = MOBILE_COLLECTION_MAP[collectionName];
+    if (mobileAlias) {
+      try {
+        const aliasRef = doc(db, mobileAlias, String(docId));
+        await deleteDoc(aliasRef);
+      } catch (aliasErr) {
+        console.warn(`Dual delete from ${mobileAlias} warning:`, aliasErr);
+      }
+    }
+
     return true;
   } catch (e) {
     console.error(`Error deleting ${collectionName}/${docId} from Firestore:`, e);

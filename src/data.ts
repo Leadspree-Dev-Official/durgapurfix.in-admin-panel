@@ -22,6 +22,7 @@ export const initialCategories: ServiceCategory[] = [
     name: 'AC Mechanic',
     description: 'Expert AC repair, servicing, installation, and gas refilling.',
     icon: 'AirConditioner',
+    image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80',
     status: 'active',
     servicesCount: 3
   },
@@ -30,6 +31,7 @@ export const initialCategories: ServiceCategory[] = [
     name: 'Plumbing',
     description: 'Leak fixing, tap installation, piping, and bathroom fittings.',
     icon: 'Droplet',
+    image: 'https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=600&auto=format&fit=crop&q=80',
     status: 'active',
     servicesCount: 4
   },
@@ -38,6 +40,7 @@ export const initialCategories: ServiceCategory[] = [
     name: 'Beautician',
     description: 'Salon services, bridal makeup, facials, and hair styling at home.',
     icon: 'Sparkles',
+    image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600&auto=format&fit=crop&q=80',
     status: 'active',
     servicesCount: 3
   },
@@ -46,6 +49,7 @@ export const initialCategories: ServiceCategory[] = [
     name: 'Electrician',
     description: 'Fan repair, switchboard repair, house wiring, and short circuit fixes.',
     icon: 'Zap',
+    image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=600&auto=format&fit=crop&q=80',
     status: 'active',
     servicesCount: 3
   },
@@ -54,6 +58,7 @@ export const initialCategories: ServiceCategory[] = [
     name: 'Chefs & Cooks',
     description: 'Experienced cooks for home, parties, and daily meal preparation.',
     icon: 'Utensils',
+    image: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=600&auto=format&fit=crop&q=80',
     status: 'active',
     servicesCount: 2
   },
@@ -62,6 +67,7 @@ export const initialCategories: ServiceCategory[] = [
     name: 'Home Cleaning',
     description: 'Full house deep cleaning, kitchen cleaning, and sofa washing.',
     icon: 'Trash2',
+    image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&auto=format&fit=crop&q=80',
     status: 'active',
     servicesCount: 3
   }
@@ -74,6 +80,7 @@ export const initialSubCategories: ServiceSubCategory[] = [
     categoryName: 'AC Mechanic',
     name: 'Split AC Servicing',
     description: 'Complete wet cleaning and filter cleaning of Split AC.',
+    image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&auto=format&fit=crop&q=80',
     status: 'active'
   },
   {
@@ -82,6 +89,7 @@ export const initialSubCategories: ServiceSubCategory[] = [
     categoryName: 'AC Mechanic',
     name: 'AC Installation',
     description: 'Proper mounting and pipe installation of AC unit.',
+    image: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500&auto=format&fit=crop&q=80',
     status: 'active'
   },
   {
@@ -90,6 +98,7 @@ export const initialSubCategories: ServiceSubCategory[] = [
     categoryName: 'Plumbing',
     name: 'Water Pipe Leak Repair',
     description: 'Identify and fix pipeline leakages and blockages.',
+    image: 'https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=500&auto=format&fit=crop&q=80',
     status: 'active'
   },
   {
@@ -98,6 +107,7 @@ export const initialSubCategories: ServiceSubCategory[] = [
     categoryName: 'Plumbing',
     name: 'Bathroom Fittings Installation',
     description: 'Installation of showers, taps, and wash basins.',
+    image: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=500&auto=format&fit=crop&q=80',
     status: 'active'
   },
   {
@@ -734,6 +744,21 @@ export const defaultSettings: SystemSettings = {
     emailVerification: true,
     smsVerification: false,
     kycMandatory: true
+  },
+  appointmentSettings: {
+    maxAdvanceBookingDays: 7,
+    sameDayBookingLeadTimeHours: 2,
+    enableSameDayBooking: true,
+    enableSundayBooking: true,
+    autoConfirmSlots: false,
+    timeSlots: [
+      { id: 'slot-1', startTime: '08:00 AM', endTime: '10:00 AM', label: '08:00 AM - 10:00 AM', isActive: true, maxCapacity: 10 },
+      { id: 'slot-2', startTime: '10:00 AM', endTime: '12:00 PM', label: '10:00 AM - 12:00 PM', isActive: true, maxCapacity: 15 },
+      { id: 'slot-3', startTime: '12:00 PM', endTime: '02:00 PM', label: '12:00 PM - 02:00 PM', isActive: true, maxCapacity: 12 },
+      { id: 'slot-4', startTime: '02:00 PM', endTime: '04:00 PM', label: '02:00 PM - 04:00 PM', isActive: true, maxCapacity: 15 },
+      { id: 'slot-5', startTime: '04:00 PM', endTime: '06:00 PM', label: '04:00 PM - 06:00 PM', isActive: true, maxCapacity: 15 },
+      { id: 'slot-6', startTime: '06:00 PM', endTime: '08:00 PM', label: '06:00 PM - 08:00 PM', isActive: true, maxCapacity: 8 }
+    ]
   },
   policyPages: {
     aboutUs: 'Durgapur Fix is the premier home service aggregator platform operating locally in the beautiful steel city of Durgapur. Our mission is to bridge the gap between quality domestic service professionals and homeowners, providing a reliable, safe, and professional experience.',

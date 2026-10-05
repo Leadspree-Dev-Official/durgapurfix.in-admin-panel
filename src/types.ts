@@ -15,6 +15,7 @@ export interface ServiceCategory {
   name: string;
   description: string;
   icon: string;
+  image?: string; // High-res Category Display Banner / Image
   status: 'active' | 'inactive';
   servicesCount: number;
 }
@@ -25,6 +26,7 @@ export interface ServiceSubCategory {
   categoryName: string;
   name: string;
   description: string;
+  image?: string; // Sub Category Thumbnail Image
   status: 'active' | 'inactive';
 }
 
@@ -195,14 +197,37 @@ export interface WithdrawalRequest {
   date: string;
 }
 
+export interface AppointmentTimeSlot {
+  id: string;
+  startTime: string; // e.g. "08:00 AM"
+  endTime: string;   // e.g. "10:00 AM"
+  label: string;     // e.g. "08:00 AM - 10:00 AM"
+  isActive: boolean;
+  maxCapacity?: number; // max bookings per window
+}
+
+export interface AppointmentSettings {
+  maxAdvanceBookingDays: number; // e.g. 7 or 14 days
+  sameDayBookingLeadTimeHours: number; // e.g. 2 hours
+  enableSameDayBooking: boolean;
+  enableSundayBooking: boolean;
+  autoConfirmSlots: boolean;
+  timeSlots: AppointmentTimeSlot[];
+}
+
 export interface UserNotification {
   id: string;
-  targetType: 'all_users' | 'all_providers' | 'individual';
+  targetType: 'all_users' | 'all_providers' | 'zone' | 'individual';
   targetName?: string;
+  targetZone?: string;
   title: string;
   message: string;
+  imageUrl?: string;
+  actionUrl?: string;
+  priority?: 'normal' | 'high' | 'urgent';
   sender: string;
   date: string;
+  status?: 'sent' | 'scheduled';
 }
 
 export interface LoginLog {
@@ -238,6 +263,7 @@ export interface SystemSettings {
     smsVerification: boolean;
     kycMandatory: boolean;
   };
+  appointmentSettings?: AppointmentSettings;
   policyPages: {
     aboutUs: string;
     termsConditions: string;
