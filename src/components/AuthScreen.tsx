@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { UserRole } from '../types';
-import { Shield, Briefcase, UserCheck, Key, Home, Sparkles, AlertCircle, ArrowLeft, Globe, Loader2, CheckCircle2, Lock, Mail, User as UserIcon, Phone as PhoneIcon } from 'lucide-react';
+import { Shield, Briefcase, UserCheck, Key, Home, Sparkles, AlertCircle, ArrowLeft, Globe, Loader2, CheckCircle2, Lock, Mail, User as UserIcon, Phone as PhoneIcon, ArrowUpRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { DEFAULT_MAN_AVATAR } from '../data/avengers';
 import Logo from './Logo';
@@ -348,6 +348,20 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
           </div>
         </div>
       </motion.div>
+
+      {/* Developer Footer on Auth Screen */}
+      <div className="mt-4 text-center text-xs text-slate-500 flex items-center justify-center gap-1 z-10 font-medium">
+        <span>Developer :</span>
+        <a 
+          href="https://leadspree.in" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="font-bold text-emerald-600 hover:text-emerald-700 hover:underline transition"
+          title="Visit LeadSpree Business Solutions (leadspree.in)"
+        >
+          LeadSpree Business Solutions
+        </a>
+      </div>
     </div>
   );
 }

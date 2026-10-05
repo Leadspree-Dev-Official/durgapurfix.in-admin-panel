@@ -37,7 +37,7 @@ export default function OrdersView({
       case 'orders-pending': return orders.filter(o => o.status === 'pending');
       case 'orders-confirmed': return orders.filter(o => o.status === 'confirmed');
       case 'orders-initiated': return orders.filter(o => o.status === 'initiated');
-      case 'orders-canceled': return orders.filter(o => o.status === 'canceled');
+      case 'orders-canceled': return orders.filter(o => o.status === 'canceled' || (o.status as string) === 'cancelled');
       default: return orders;
     }
   };

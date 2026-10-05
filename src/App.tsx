@@ -257,7 +257,7 @@ export default function App() {
                 address: b.customerAddress || b.address || 'Durgapur, WB',
                 date: b.date || b.bookingDate || new Date().toISOString().split('T')[0],
                 timeSlot: b.timeSlot || b.time || '10:00 AM - 12:00 PM',
-                status: b.status || 'pending',
+                status: (b.status === 'cancelled' || b.status === 'canceled') ? 'canceled' : (b.status || 'pending'),
                 amount: Number(b.amount || b.price || b.totalAmount || 399),
                 paymentStatus: b.paymentStatus || 'pending',
                 paymentMode: b.paymentMode || b.paymentMethod || 'Cash',
@@ -758,11 +758,27 @@ export default function App() {
               <span className="text-slate-300">|</span>
               <span className="font-semibold text-slate-700">Home Services Platform</span>
             </div>
-            <p className="flex items-center gap-1.5 text-[11px]">
-              <span>Official Operations: <strong className="text-slate-800 font-bold">Durgapur Fix</strong></span>
-              <span className="text-slate-300">•</span>
-              <span>Contact: <strong className="text-slate-800 font-bold">durgapurfix@gmail.com</strong></span>
-            </p>
+
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-[11px]">
+              <p className="flex items-center gap-1.5">
+                <span>Official Operations: <strong className="text-slate-800 font-bold">Durgapur Fix</strong></span>
+                <span className="text-slate-300">•</span>
+                <span>Contact: <strong className="text-slate-800 font-bold">durgapurfix@gmail.com</strong></span>
+              </p>
+              <span className="hidden sm:inline text-slate-300">|</span>
+              <p className="flex items-center gap-1 font-medium">
+                <span>Developer :</span>
+                <a 
+                  href="https://leadspree.in" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="font-bold text-emerald-600 hover:text-emerald-700 hover:underline transition"
+                  title="Visit LeadSpree Business Solutions (leadspree.in)"
+                >
+                  LeadSpree Business Solutions
+                </a>
+              </p>
+            </div>
           </footer>
         </div>
       </main>

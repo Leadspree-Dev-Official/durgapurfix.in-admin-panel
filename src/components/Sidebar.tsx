@@ -97,7 +97,7 @@ export default function Sidebar({
     },
     {
       id: 'sliders',
-      label: 'Sliders',
+      label: 'Sliders / Promo Banners',
       icon: Layers,
       view: 'sliders',
       allowedRoles: ['admin']

@@ -183,10 +183,12 @@ export default function ZonesCouponsSliders({
     <div className="space-y-6 select-none" id="zones-coupons-sliders-root">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-800 capitalize">{viewType} Configuration</h2>
+          <h2 className="text-2xl font-extrabold text-slate-800">
+            {viewType === 'coupons' ? 'Coupon Codes & Discounts' : 'Promo Banners & Carousel Sliders'}
+          </h2>
           <p className="text-slate-500 text-xs mt-1">
             {viewType === 'coupons' && 'Declare discount promotional codes with minimum purchase limits to drive orders.'}
-            {viewType === 'sliders' && 'Control carousel banner slide announcements visible in user application hubs.'}
+            {viewType === 'sliders' && 'Add, edit, or remove mobile app hero carousel promo banners and promotional announcements.'}
           </p>
         </div>
         <button
@@ -198,7 +200,7 @@ export default function ZonesCouponsSliders({
           id="add-zcs-btn"
         >
           <Plus className="w-4 h-4" />
-          <span>{editingId ? 'Edit Item' : `Add New ${viewType.slice(0, -1)}`}</span>
+          <span>{editingId ? 'Edit Item' : (viewType === 'coupons' ? 'Add New Coupon' : 'Add New Promo Banner')}</span>
         </button>
       </div>
 
@@ -206,7 +208,7 @@ export default function ZonesCouponsSliders({
         <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-md max-w-xl" id="zcs-form">
           <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
             {renderIcon()}
-            <span>{editingId ? 'Edit Existing' : 'Create New'} {viewType.slice(0, -1)} Record</span>
+            <span>{editingId ? 'Edit Existing' : 'Create New'} {viewType === 'coupons' ? 'Coupon' : 'Promo Banner'}</span>
           </h3>
 
           {viewType === 'coupons' && (
