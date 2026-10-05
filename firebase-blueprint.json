@@ -1,0 +1,225 @@
+{
+  "entities": {
+    "categories": {
+      "title": "Service Categories",
+      "description": "Primary service categories (AC Mechanic, Plumbing, Electrician, etc.)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string" },
+        "status": { "type": "string" },
+        "servicesCount": { "type": "number" }
+      },
+      "required": ["id", "name", "status"]
+    },
+    "subcategories": {
+      "title": "Service Subcategories",
+      "description": "Subcategories linked to primary categories",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "name": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "categoryId", "name", "status"]
+    },
+    "zones": {
+      "title": "Operational Zones",
+      "description": "Geographical delivery and service zones across Durgapur",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "pincode": { "type": "string" },
+        "status": { "type": "string" },
+        "providersCount": { "type": "number" }
+      },
+      "required": ["id", "name", "status"]
+    },
+    "coupons": {
+      "title": "Promotional Coupons",
+      "description": "Discount codes and promotional coupons",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string" },
+        "discountType": { "type": "string" },
+        "discountValue": { "type": "number" },
+        "minOrderValue": { "type": "number" },
+        "validTill": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "code", "discountType", "discountValue", "status"]
+    },
+    "sliders": {
+      "title": "Promotional Sliders",
+      "description": "Hero banners displayed in the customer mobile and web apps",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "actionUrl": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "title", "imageUrl", "status"]
+    },
+    "services": {
+      "title": "Service Items",
+      "description": "Individual home service offerings with pricing and duration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "categoryName": { "type": "string" },
+        "price": { "type": "number" },
+        "discountPrice": { "type": "number" },
+        "duration": { "type": "string" },
+        "rating": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "name", "categoryId", "price", "status"]
+    },
+    "providers": {
+      "title": "Service Providers",
+      "description": "Registered home service technicians and KYC verification records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "status": { "type": "string" },
+        "rating": { "type": "number" },
+        "balance": { "type": "number" },
+        "jobsCompleted": { "type": "number" },
+        "joinDate": { "type": "string" }
+      },
+      "required": ["id", "name", "phone", "status"]
+    },
+    "orders": {
+      "title": "Service Orders",
+      "description": "Customer bookings, job orders, and real-time execution states",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "serviceName": { "type": "string" },
+        "status": { "type": "string" },
+        "amount": { "type": "number" },
+        "bookingDate": { "type": "string" },
+        "assignedProvider": { "type": "string" }
+      },
+      "required": ["id", "customerName", "serviceName", "status", "amount"]
+    },
+    "users": {
+      "title": "Customer Users",
+      "description": "Registered customer profiles and contact details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "status": { "type": "string" },
+        "joinDate": { "type": "string" }
+      },
+      "required": ["id", "name", "phone", "status"]
+    },
+    "settings": {
+      "title": "System Settings",
+      "description": "Global application configuration and operational parameters",
+      "type": "object",
+      "properties": {
+        "appName": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "contactPhone": { "type": "string" },
+        "commissionRate": { "type": "number" },
+        "taxRate": { "type": "number" },
+        "currency": { "type": "string" }
+      },
+      "required": ["appName", "currency"]
+    }
+  },
+  "securityRules": {
+    "match": [
+      {
+        "path": "/categories/{categoryId}",
+        "allow": {
+          "read": "true",
+          "write": "true"
+        }
+      },
+      {
+        "path": "/subcategories/{subcategoryId}",
+        "allow": {
+          "read": "true",
+          "write": "true"
+        }
+      },
+      {
+        "path": "/zones/{zoneId}",
+        "allow": {
+          "read": "true",
+          "write": "true"
+        }
+      },
+      {
+        "path": "/coupons/{couponId}",
+        "allow": {
+          "read": "true",
+          "write": "true"
+        }
+      },
+      {
+        "path": "/sliders/{sliderId}",
+        "allow": {
+          "read": "true",
+          "write": "true"
+        }
+      },
+      {
+        "path": "/services/{serviceId}",
+        "allow": {
+          "read": "true",
+          "write": "true"
+        }
+      },
+      {
+        "path": "/providers/{providerId}",
+        "allow": {
+          "read": "true",
+          "write": "true"
+        }
+      },
+      {
+        "path": "/orders/{orderId}",
+        "allow": {
+          "read": "true",
+          "write": "true"
+        }
+      },
+      {
+        "path": "/users/{userId}",
+        "allow": {
+          "read": "true",
+          "write": "true"
+        }
+      },
+      {
+        "path": "/settings/{settingId}",
+        "allow": {
+          "read": "true",
+          "write": "true"
+        }
+      }
+    ]
+  }
+}
