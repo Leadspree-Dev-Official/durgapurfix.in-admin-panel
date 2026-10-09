@@ -55,6 +55,8 @@ export default function App() {
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<CustomerUser[]>([]);
+  // Mobile app sign-ups live in the "durgapur_users" collection.
+  const [appUsers, setAppUsers] = useState<CustomerUser[]>([]);
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
@@ -282,6 +284,27 @@ export default function App() {
         }
       }));
 
+      // Listen to Android Mobile App registered users (durgapur_users)
+      unsubs.push(subscribeToCollection<any>('durgapur_users', (mobileUsers) => {
+        const mapped: CustomerUser[] = (mobileUsers || []).map((u: any) => ({
+          id: u.id || u.uid || `mu_${Math.random().toString(36).slice(2, 8)}`,
+          name: u.name || 'App Customer',
+          email: u.email || '',
+          phone: u.phone || u.phone10 || '',
+          avatar: u.avatar,
+          gender: u.gender,
+          status: 'active' as const,
+          joinDate: u.createdAt
+            ? new Date(Number(u.createdAt)).toISOString().split('T')[0]
+            : new Date().toISOString().split('T')[0],
+          ordersCount: 0,
+          verified: u.verified === true || u.status === 'verified',
+          source: 'app' as const
+        }));
+        setAppUsers(mapped);
+        localStorage.setItem('durgapur_app_users', JSON.stringify(mapped));
+      }));
+
       unsubs.push(subscribeToCollection<ServiceProvider>('providers', (items) => {
         if (items && items.length > 0) {
           setProviders(items);
@@ -362,6 +385,17 @@ export default function App() {
     } else if (db && key === 'settings') {
       syncDocToFirestore('settings', 'global', data).catch(() => {});
     }
+  };
+
+  // Admin verification for mobile app sign-ups (writes to durgapur_users only)
+  const handleVerifyAppUser = (userId: string, verified: boolean) => {
+    const updated = appUsers.map(u => (u.id === userId ? { ...u, verified } : u));
+    setAppUsers(updated);
+    localStorage.setItem('durgapur_app_users', JSON.stringify(updated));
+    syncDocToFirestore('durgapur_users', userId, {
+      status: verified ? 'verified' : 'pending',
+      verified
+    }).catch(() => {});
   };
 
   // Auth triggers
@@ -551,7 +585,9 @@ export default function App() {
         <UsersView 
           activeView={activeView}
           users={users}
+          appUsers={appUsers}
           notifications={notifications}
+          onVerifyUser={handleVerifyAppUser}
           onEditUserPhoto={(u) => openPhotoModal('user', u.id, u.name, u.avatar || DEFAULT_MAN_AVATAR)}
           onUpdateUsers={(updatedUsers) => updateAndPersist('users', updatedUsers, setUsers)}
           onUpdateNotifications={(updatedNotifs) => updateAndPersist('notifications', updatedNotifs, setNotifications)}

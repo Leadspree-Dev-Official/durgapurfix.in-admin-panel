@@ -4,20 +4,24 @@ import { ShieldAlert, ShieldCheck, Search, Bell, Send, Check, Camera, Sparkles }
 import { getDefaultAvatar } from '../data/avengers';
 
 interface UsersViewProps {
-  activeView: string; // 'users-active' | 'users-banned' | 'users-all' | 'users-notify'
+  activeView: string; // 'users-active' | 'users-banned' | 'users-all' | 'users-notify' | 'users-pending'
   users: CustomerUser[];
+  appUsers?: CustomerUser[];
   notifications: UserNotification[];
   onUpdateUsers: (users: CustomerUser[]) => void;
   onUpdateNotifications: (notifs: UserNotification[]) => void;
+  onVerifyUser?: (userId: string, verified: boolean) => void;
   onEditUserPhoto?: (user: CustomerUser) => void;
 }
 
 export default function UsersView({
   activeView,
   users,
+  appUsers = [],
   notifications,
   onUpdateUsers,
   onUpdateNotifications,
+  onVerifyUser,
   onEditUserPhoto
 }: UsersViewProps) {
 
@@ -30,20 +34,37 @@ export default function UsersView({
   const [notifTarget, setNotifTarget] = useState<'all_users' | 'all_providers'>('all_users');
   const [successAlert, setSuccessAlert] = useState(false);
 
+  // Verification / access badge (mobile app users show Verified|Pending)
+  const renderStatusBadge = (u: CustomerUser, compact = false) => {
+    const pad = compact ? 'px-2 py-0.5 text-[9px]' : 'px-2.5 py-1 text-[10px] tracking-wider';
+    const base = `inline-flex rounded-full font-bold border uppercase ${pad}`;
+    if (u.source === 'app') {
+      return u.verified
+        ? <span className={`${base} bg-emerald-50 text-emerald-700 border-emerald-200`}>Verified</span>
+        : <span className={`${base} bg-amber-50 text-amber-700 border-amber-200`}>Pending</span>;
+    }
+    return u.status === 'active'
+      ? <span className={`${base} bg-emerald-50 text-emerald-700 border-emerald-200`}>Active</span>
+      : <span className={`${base} bg-red-50 text-red-700 border-red-200`}>Banned</span>;
+  };
+
   // Filter users based on submenu Selection
   const getFilteredUsers = () => {
-    let filtered = [...users];
+    let filtered = [...users, ...appUsers];
 
-    if (activeView === 'users-active') {
+    if (activeView === 'users-pending') {
+      filtered = filtered.filter(u => u.source === 'app' && !u.verified);
+    } else if (activeView === 'users-active') {
       filtered = filtered.filter(u => u.status === 'active');
     } else if (activeView === 'users-banned') {
       filtered = filtered.filter(u => u.status === 'banned');
     }
 
     if (searchTerm) {
+      const term = searchTerm.toLowerCase();
       filtered = filtered.filter(u => 
-        u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.name.toLowerCase().includes(term) ||
+        (u.email || '').toLowerCase().includes(term) ||
         u.phone.includes(searchTerm)
       );
     }
@@ -200,20 +221,32 @@ export default function UsersView({
                         <p className="text-[10px] text-slate-500 font-mono">{u.phone}</p>
                       </div>
                     </div>
-                    {u.status === 'active' ? (
-                      <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase">
-                        Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold bg-red-50 text-red-700 border border-red-200 uppercase">
-                        Banned
-                      </span>
-                    )}
+                    {renderStatusBadge(u, true)}
                   </div>
 
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px]">
-                    <span className="text-slate-400 font-mono text-[10px] truncate max-w-[170px]">{u.email}</span>
-                    {u.status === 'active' ? (
+                    <span className="text-slate-400 font-mono text-[10px] truncate max-w-[170px]">{u.email || '—'}</span>
+                    {u.source === 'app' ? (
+                      u.verified ? (
+                        <button
+                          type="button"
+                          onClick={() => onVerifyUser?.(u.id, false)}
+                          className="py-1 px-2.5 bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold rounded-lg cursor-pointer transition flex items-center gap-1 shadow-2xs"
+                        >
+                          <ShieldAlert className="w-3 h-3" />
+                          <span>Mark Pending</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onVerifyUser?.(u.id, true)}
+                          className="py-1 px-2.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold rounded-lg cursor-pointer transition flex items-center gap-1 shadow-2xs"
+                        >
+                          <ShieldCheck className="w-3 h-3" />
+                          <span>Verify</span>
+                        </button>
+                      )
+                    ) : u.status === 'active' ? (
                       <button
                         type="button"
                         onClick={() => toggleBanStatus(u.id)}
@@ -287,22 +320,32 @@ export default function UsersView({
                           </div>
                         </div>
                       </td>
-                      <td className="py-4 px-4 text-slate-550 font-mono text-xs font-semibold">{u.email}</td>
+                      <td className="py-4 px-4 text-slate-550 font-mono text-xs font-semibold">{u.email || '—'}</td>
                       <td className="py-4 px-4 text-slate-600 font-mono text-xs font-bold">{u.phone}</td>
                       <td className="py-4 px-4 text-slate-400 font-mono text-[11px] font-semibold">{u.joinDate}</td>
                       <td className="py-4 px-4 text-center">
-                        {u.status === 'active' ? (
-                          <span className="inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wider">
-                            Active
-                          </span>
-                        ) : (
-                          <span className="inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 uppercase tracking-wider">
-                            Banned
-                          </span>
-                        )}
+                        {renderStatusBadge(u)}
                       </td>
                       <td className="py-4 px-4 text-right">
-                        {u.status === 'active' ? (
+                        {u.source === 'app' ? (
+                          u.verified ? (
+                            <button
+                              onClick={() => onVerifyUser?.(u.id, false)}
+                              className="py-1.5 px-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 text-[10px] font-bold rounded-lg cursor-pointer transition flex items-center gap-1.5 ml-auto shadow-xs"
+                            >
+                              <ShieldAlert className="w-3.5 h-3.5" />
+                              <span>Mark Pending</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => onVerifyUser?.(u.id, true)}
+                              className="py-1.5 px-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-[10px] font-bold rounded-lg cursor-pointer transition flex items-center gap-1.5 ml-auto shadow-xs"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5" />
+                              <span>Verify Account</span>
+                            </button>
+                          )
+                        ) : u.status === 'active' ? (
                           <button
                             onClick={() => toggleBanStatus(u.id)}
                             className="py-1.5 px-3 bg-red-50 hover:bg-red-100 border border-red-150 text-red-600 text-[10px] font-bold rounded-lg cursor-pointer transition flex items-center gap-1.5 ml-auto shadow-xs"

@@ -127,6 +127,9 @@ export interface CustomerUser {
   status: 'active' | 'banned';
   joinDate: string;
   ordersCount: number;
+  // Mobile app sign-ups carry an admin-controlled verification flag.
+  verified?: boolean;
+  source?: 'web' | 'app';
 }
 
 export type ProviderStatus = 

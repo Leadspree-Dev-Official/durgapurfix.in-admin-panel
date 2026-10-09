@@ -142,6 +142,7 @@ export default function Sidebar({
         { label: 'Active User', view: 'users-active' },
         { label: 'Banned User', view: 'users-banned' },
         { label: 'All User', view: 'users-all' },
+        { label: 'Pending Verification', view: 'users-pending' },
         { label: 'Send Notification', view: 'users-notify' }
       ],
       allowedRoles: ['admin', 'executive']
