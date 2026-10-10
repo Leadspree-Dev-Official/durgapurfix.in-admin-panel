@@ -3,7 +3,7 @@ import { Order, ServiceProvider, SystemSettings } from '../types';
 import { calculateOrderFinalBill } from '../utils/billing';
 import { 
   Briefcase, CheckCircle2, XCircle, Hourglass, ArrowUpRight, 
-  MapPin, Phone, Mail, User, AlertTriangle, RefreshCw, Send, Check, FileText
+  MapPin, Phone, Mail, User, AlertTriangle, RefreshCw, Send, Check, FileText, Trash2
 } from 'lucide-react';
 
 interface OrdersViewProps {
@@ -30,6 +30,17 @@ export default function OrdersView({
   const [selectedProvId, setSelectedProvId] = useState('');
   const [complaintText, setComplaintText] = useState('');
   const [alertMsg, setAlertMsg] = useState('');
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+
+  const handleConfirmDelete = () => {
+    if (!orderToDelete) return;
+    const updated = orders.filter(o => o.id !== orderToDelete.id);
+    onUpdateOrders(updated);
+    if (selectedOrder?.id === orderToDelete.id) {
+      setSelectedOrder(null);
+    }
+    setOrderToDelete(null);
+  };
 
   // Filtering orders based on sidebar sub-menu triggers
   const getFilteredOrders = () => {
@@ -247,6 +258,17 @@ export default function OrdersView({
                         <span>Manage</span>
                         <ArrowUpRight className="w-3 h-3" />
                       </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOrderToDelete(order);
+                        }}
+                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition"
+                        title="Delete Order"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -345,6 +367,16 @@ export default function OrdersView({
                         >
                           <span>Manage</span>
                           <ArrowUpRight className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOrderToDelete(order);
+                          }}
+                          className="py-1.5 px-2 text-[10px] bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 rounded-lg cursor-pointer transition shadow-xs inline-flex items-center gap-1 font-bold"
+                          title="Delete Order Permanently"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </td>
                     </tr>
@@ -600,6 +632,18 @@ export default function OrdersView({
                   ))}
                 </div>
               </div>
+
+              {/* Danger Zone: Permanent Delete */}
+              <div className="pt-3 border-t border-red-100">
+                <button
+                  type="button"
+                  onClick={() => setOrderToDelete(selectedOrder)}
+                  className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Order Record Permanently</span>
+                </button>
+              </div>
             </>
           ) : (
             <div className="text-center py-12 text-slate-400 space-y-2 font-semibold">
@@ -609,6 +653,39 @@ export default function OrdersView({
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {orderToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95">
+            <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-sm font-bold text-slate-900">Delete Order #{orderToDelete.id}?</h3>
+              <p className="text-xs text-slate-500">
+                Are you sure you want to delete this order for <strong className="text-slate-700">{orderToDelete.customerName}</strong> ({orderToDelete.serviceName})? This will permanently delete the booking from the admin panel and mobile database.
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setOrderToDelete(null)}
+                className="flex-1 py-2 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="flex-1 py-2 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-xs font-bold text-white shadow-xs transition cursor-pointer"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

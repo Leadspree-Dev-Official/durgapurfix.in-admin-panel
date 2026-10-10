@@ -38,6 +38,13 @@ export default function ServicesView({
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [srvUploadError, setSrvUploadError] = useState('');
+  const [serviceToDelete, setServiceToDelete] = useState<ServiceItem | null>(null);
+
+  const handleConfirmDeleteService = () => {
+    if (!serviceToDelete) return;
+    onUpdateServices(services.filter(s => s.id !== serviceToDelete.id));
+    setServiceToDelete(null);
+  };
 
   const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setSrvUploadError('');
@@ -471,7 +478,7 @@ export default function ServicesView({
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDeleteService(srv.id)}
+                          onClick={() => setServiceToDelete(srv)}
                           className="p-1.5 rounded-lg bg-red-50 text-red-600 border border-red-100 cursor-pointer"
                           title="Delete Service"
                         >
@@ -559,7 +566,7 @@ export default function ServicesView({
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => handleDeleteService(srv.id)}
+                          onClick={() => setServiceToDelete(srv)}
                           className="p-2 rounded-lg bg-red-50 border border-red-100 text-red-600 hover:bg-red-100 hover:text-red-700 cursor-pointer transition shadow-xs inline-flex"
                           title="Delete Service"
                         >
@@ -580,6 +587,39 @@ export default function ServicesView({
           </div>
         )}
       </div>
+
+      {/* Delete Service Confirmation Modal */}
+      {serviceToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95">
+            <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-sm font-bold text-slate-900">Delete Service?</h3>
+              <p className="text-xs text-slate-500">
+                Are you sure you want to delete <strong className="text-slate-700">{serviceToDelete.name}</strong> (₹{serviceToDelete.price})? This will permanently remove it from the catalog and mobile app.
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setServiceToDelete(null)}
+                className="flex-1 py-2 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteService}
+                className="flex-1 py-2 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-xs font-bold text-white shadow-xs transition cursor-pointer"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

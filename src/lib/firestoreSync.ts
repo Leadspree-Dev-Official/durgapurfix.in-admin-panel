@@ -9,12 +9,44 @@ export interface SyncProgress {
   currentCollection: string;
 }
 
-// Map portal collection to mobile app alias collection
-const MOBILE_COLLECTION_MAP: Record<string, string> = {
-  orders: 'durgapur_bookings',
-  categories: 'durgapur_categories',
-  providers: 'durgapur_professionals',
-  sliders: 'durgapur_sliders'
+/**
+ * Recursively sanitizes data for Firestore by removing any undefined values.
+ * Firestore strictly rejects undefined in setDoc, writeBatch, and updateDoc.
+ */
+export function cleanForFirestore<T>(val: T): T {
+  if (val === undefined) {
+    return null as any;
+  }
+  if (val === null) {
+    return null as any;
+  }
+  if (Array.isArray(val)) {
+    return val
+      .filter(item => item !== undefined)
+      .map(item => cleanForFirestore(item)) as any;
+  }
+  if (typeof val === 'object' && val !== null) {
+    if (val instanceof Date) {
+      return val.toISOString() as any;
+    }
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(val)) {
+      if (value !== undefined) {
+        cleaned[key] = cleanForFirestore(value);
+      }
+    }
+    return cleaned;
+  }
+  return val;
+}
+
+// Map portal collection to mobile app alias collections
+const MOBILE_COLLECTION_MAP: Record<string, string[]> = {
+  orders: ['durgapur_bookings', 'bookings', 'durgapur_orders'],
+  categories: ['durgapur_categories'],
+  providers: ['durgapur_professionals'],
+  sliders: ['durgapur_sliders'],
+  users: ['durgapur_users']
 };
 
 /**
@@ -53,7 +85,9 @@ export async function pushAllSeedDataToFirestore(
       { name: 'durgapur_professionals', items: data.providers },
       { name: 'orders', items: data.orders },
       { name: 'durgapur_bookings', items: data.orders },
+      { name: 'bookings', items: data.orders },
       { name: 'users', items: data.users },
+      { name: 'durgapur_users', items: data.users },
       { name: 'settings', items: [data.settings], isSingleDoc: true }
     ];
 
@@ -71,7 +105,8 @@ export async function pushAllSeedDataToFirestore(
 
       if (group.isSingleDoc) {
         const docRef = doc(db, 'settings', 'global');
-        await setDoc(docRef, group.items[0], { merge: true });
+        const cleanedSettings = cleanForFirestore(group.items[0]);
+        await setDoc(docRef, cleanedSettings, { merge: true });
         completedCount++;
         continue;
       }
@@ -82,7 +117,8 @@ export async function pushAllSeedDataToFirestore(
         const chunk = group.items.slice(i, i + chunkSize);
         const batch = writeBatch(db);
 
-        for (const item of chunk) {
+        for (const rawItem of chunk) {
+          const item = cleanForFirestore(rawItem);
           const docId = item.id || `item_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
           const docRef = doc(db, group.name, String(docId));
           batch.set(docRef, item, { merge: true });
@@ -115,16 +151,19 @@ export async function syncDocToFirestore(collectionName: string, docId: string, 
   if (!db) return false;
   try {
     const docRef = doc(db, collectionName, String(docId));
-    await setDoc(docRef, data, { merge: true });
+    const cleaned = cleanForFirestore(data);
+    await setDoc(docRef, cleaned, { merge: true });
 
-    // Mirror to mobile alias collection if mapped
-    const mobileAlias = MOBILE_COLLECTION_MAP[collectionName];
-    if (mobileAlias) {
-      try {
-        const aliasRef = doc(db, mobileAlias, String(docId));
-        await setDoc(aliasRef, data, { merge: true });
-      } catch (aliasErr) {
-        console.warn(`Dual sync to ${mobileAlias} warning:`, aliasErr);
+    // Mirror to mobile alias collections if mapped
+    const mobileAliases = MOBILE_COLLECTION_MAP[collectionName];
+    if (mobileAliases && Array.isArray(mobileAliases)) {
+      for (const mobileAlias of mobileAliases) {
+        try {
+          const aliasRef = doc(db, mobileAlias, String(docId));
+          await setDoc(aliasRef, cleaned, { merge: true });
+        } catch (aliasErr) {
+          console.warn(`Dual sync to ${mobileAlias} warning:`, aliasErr);
+        }
       }
     }
 
@@ -144,14 +183,16 @@ export async function removeDocFromFirestore(collectionName: string, docId: stri
     const docRef = doc(db, collectionName, String(docId));
     await deleteDoc(docRef);
 
-    // Mirror delete to mobile alias collection if mapped
-    const mobileAlias = MOBILE_COLLECTION_MAP[collectionName];
-    if (mobileAlias) {
-      try {
-        const aliasRef = doc(db, mobileAlias, String(docId));
-        await deleteDoc(aliasRef);
-      } catch (aliasErr) {
-        console.warn(`Dual delete from ${mobileAlias} warning:`, aliasErr);
+    // Mirror delete to mobile alias collections if mapped
+    const mobileAliases = MOBILE_COLLECTION_MAP[collectionName];
+    if (mobileAliases && Array.isArray(mobileAliases)) {
+      for (const mobileAlias of mobileAliases) {
+        try {
+          const aliasRef = doc(db, mobileAlias, String(docId));
+          await deleteDoc(aliasRef);
+        } catch (aliasErr) {
+          console.warn(`Dual delete from ${mobileAlias} warning:`, aliasErr);
+        }
       }
     }
 

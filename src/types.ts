@@ -1,5 +1,15 @@
 export type UserRole = 'admin' | 'executive' | 'provider';
 
+export interface DurgapurUser {
+  uid: string;
+  name: string;
+  phone: string;        // e.g. "+919832104567"
+  phone10: string;      // 10-digit number, e.g. "9832104567"
+  status: string;       // "pending" (default on sign-up) or "verified"
+  verified: boolean;
+  createdAt: number;    // epoch milliseconds
+}
+
 export interface UserSession {
   id: string;
   name: string;

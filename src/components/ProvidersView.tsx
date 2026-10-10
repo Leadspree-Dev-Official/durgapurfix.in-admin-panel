@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ServiceProvider, UserNotification } from '../types';
-import { Search, ShieldAlert, ShieldCheck, Check, Bell, Send, Landmark, FileText, AlertTriangle, Camera, Sparkles } from 'lucide-react';
+import { Search, ShieldAlert, ShieldCheck, Check, Bell, Send, Landmark, FileText, AlertTriangle, Camera, Sparkles, Trash2 } from 'lucide-react';
 import { getDefaultAvatar } from '../data/avengers';
 
 interface ProvidersViewProps {
@@ -24,6 +24,13 @@ export default function ProvidersView({
   const isNotificationMode = activeView === 'providers-notify';
   const isKYCVerificationMode = activeView === 'providers-kyc-verification';
   const [searchTerm, setSearchTerm] = useState('');
+  const [providerToDelete, setProviderToDelete] = useState<ServiceProvider | null>(null);
+
+  const handleConfirmDeleteProvider = () => {
+    if (!providerToDelete) return;
+    onUpdateProviders(providers.filter(p => p.id !== providerToDelete.id));
+    setProviderToDelete(null);
+  };
   const [docModalImages, setDocModalImages] = useState<{ 
     name: string; 
     provider: ServiceProvider;
@@ -324,6 +331,15 @@ export default function ProvidersView({
                           Unban
                         </button>
                       ) : null}
+
+                      <button
+                        type="button"
+                        onClick={() => setProviderToDelete(p)}
+                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition"
+                        title="Delete Provider Profile"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -455,6 +471,14 @@ export default function ProvidersView({
                             Unban Partner
                           </button>
                         ) : null}
+
+                        <button
+                          onClick={() => setProviderToDelete(p)}
+                          className="py-1.5 px-2 text-[10px] bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 rounded-lg cursor-pointer transition shadow-xs inline-flex items-center gap-1 font-bold ml-1"
+                          title="Delete Partner Permanently"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -605,6 +629,39 @@ export default function ProvidersView({
                 className="px-5 py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl hover:bg-slate-800 transition cursor-pointer"
               >
                 Close Audit Lightbox
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Provider Confirmation Modal */}
+      {providerToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95">
+            <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-sm font-bold text-slate-900">Delete Service Provider?</h3>
+              <p className="text-xs text-slate-500">
+                Are you sure you want to permanently delete partner profile <strong className="text-slate-700">{providerToDelete.name}</strong> ({providerToDelete.category})? This will permanently remove their credentials and active status.
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setProviderToDelete(null)}
+                className="flex-1 py-2 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteProvider}
+                className="flex-1 py-2 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-xs font-bold text-white shadow-xs transition cursor-pointer"
+              >
+                Confirm Delete
               </button>
             </div>
           </div>

@@ -51,6 +51,18 @@ export default function CategoriesView({
   // Direct quick image editor modal
   const [quickImageItem, setQuickImageItem] = useState<{ id: string; name: string; currentImage?: string; type: 'category' | 'subcategory' } | null>(null);
   const [quickImageUrl, setQuickImageUrl] = useState('');
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string; type: 'category' | 'subcategory' } | null>(null);
+
+  const handleConfirmDeleteItem = () => {
+    if (!itemToDelete) return;
+    if (itemToDelete.type === 'category') {
+      onUpdateCategories(categories.filter(c => c.id !== itemToDelete.id));
+      onUpdateSubCategories(subCategories.filter(s => s.categoryId !== itemToDelete.id));
+    } else {
+      onUpdateSubCategories(subCategories.filter(s => s.id !== itemToDelete.id));
+    }
+    setItemToDelete(null);
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'category' | 'subcategory' | 'quick') => {
     const file = e.target.files?.[0];
@@ -672,7 +684,7 @@ export default function CategoriesView({
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => handleDeleteCategory(cat.id)}
+                        onClick={() => setItemToDelete({ id: cat.id, name: cat.name, type: 'category' })}
                         className="p-2 rounded-lg bg-red-50 border border-red-100 text-red-600 hover:bg-red-100 hover:text-red-700 cursor-pointer transition shadow-2xs"
                         title="Delete Category"
                       >
@@ -765,7 +777,7 @@ export default function CategoriesView({
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => handleDeleteSubCategory(sub.id)}
+                        onClick={() => setItemToDelete({ id: sub.id, name: sub.name, type: 'subcategory' })}
                         className="p-2 rounded-lg bg-red-50 border border-red-100 text-red-600 hover:bg-red-100 hover:text-red-700 cursor-pointer transition shadow-2xs"
                         title="Delete Subcategory"
                       >
@@ -784,6 +796,42 @@ export default function CategoriesView({
           </div>
         )}
       </div>
+
+      {/* In-App Delete Confirmation Modal */}
+      {itemToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95">
+            <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-sm font-bold text-slate-900">
+                Delete {itemToDelete.type === 'category' ? 'Category' : 'Sub-Category'}?
+              </h3>
+              <p className="text-xs text-slate-500">
+                Are you sure you want to delete <strong className="text-slate-700">{itemToDelete.name}</strong>?
+                {itemToDelete.type === 'category' && ' All nested sub-categories will also be deleted.'}
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setItemToDelete(null)}
+                className="flex-1 py-2 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteItem}
+                className="flex-1 py-2 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-xs font-bold text-white shadow-xs transition cursor-pointer"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

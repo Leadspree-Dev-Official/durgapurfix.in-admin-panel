@@ -35,6 +35,12 @@ service cloud.firestore {
     match /durgapur_bookings/{bookingId} {
       allow read, write: if true;
     }
+    match /bookings/{bookingId} {
+      allow read, write: if true;
+    }
+    match /durgapur_orders/{orderId} {
+      allow read, write: if true;
+    }
 
     // 3. Service Providers & Technicians
     match /providers/{providerId} {
@@ -46,6 +52,9 @@ service cloud.firestore {
 
     // 4. Users, Notifications & System Settings
     match /users/{userId} {
+      allow read, write: if true;
+    }
+    match /durgapur_users/{userId} {
       allow read, write: if true;
     }
     match /notifications/{notificationId} {

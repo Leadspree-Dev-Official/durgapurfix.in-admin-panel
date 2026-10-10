@@ -232,50 +232,63 @@ export default function App() {
         }
       }));
 
-      unsubs.push(subscribeToCollection<Order>('orders', (items) => {
-        if (items && items.length > 0) {
-          setOrders(items);
-          localStorage.setItem('durgapur_orders', JSON.stringify(items));
-        }
-      }));
+      // Unified order normalizer for web and mobile app payloads
+      const normalizeIncomingOrder = (b: any, fallbackId: string): Order => {
+        const statusStr = (b.status || b.order_status || 'pending').toString().toLowerCase();
+        const normalizedStatus: Order['status'] = 
+          (statusStr === 'cancelled' || statusStr === 'canceled') ? 'canceled'
+          : (['pending', 'confirmed', 'initiated', 'ongoing', 'completed', 'canceled'].includes(statusStr) 
+            ? (statusStr as Order['status']) 
+            : 'pending');
 
-      // Listen to Android Mobile App bookings collection (durgapur_bookings)
-      unsubs.push(subscribeToCollection<any>('durgapur_bookings', (mobileBookings) => {
-        if (mobileBookings && mobileBookings.length > 0) {
-          setOrders((prevOrders) => {
-            const map = new Map<string, Order>();
-            // Keep existing orders
-            prevOrders.forEach(o => map.set(o.id, o));
-            // Merge mobile bookings
-            mobileBookings.forEach((b: any) => {
-              const formattedOrder: Order = {
-                id: b.id || b.bookingId || `mb_${Date.now()}`,
-                customerName: b.customerName || b.userName || 'App Customer',
-                customerPhone: b.customerPhone || b.phone || '9832100000',
-                customerEmail: b.customerEmail || b.email || 'customer@durgapurfix.in',
-                serviceName: b.serviceName || b.category || 'Home Service',
-                serviceId: b.serviceId || 'srv-1',
-                zone: b.zone || b.location || 'City Centre Zone',
-                address: b.customerAddress || b.address || 'Durgapur, WB',
-                date: b.date || b.bookingDate || new Date().toISOString().split('T')[0],
-                timeSlot: b.timeSlot || b.time || '10:00 AM - 12:00 PM',
-                status: (b.status === 'cancelled' || b.status === 'canceled') ? 'canceled' : (b.status || 'pending'),
-                amount: Number(b.amount || b.price || b.totalAmount || 399),
-                paymentStatus: b.paymentStatus || 'pending',
-                paymentMode: b.paymentMode || b.paymentMethod || 'Cash',
-                providerId: b.providerId || b.technicianId,
-                providerName: b.providerName || b.technicianName,
-                complaint: b.complaint || b.notes || b.instructions,
-                createdAt: b.createdAt || new Date().toISOString()
-              };
-              map.set(formattedOrder.id, formattedOrder);
-            });
-            const merged = Array.from(map.values());
-            localStorage.setItem('durgapur_orders', JSON.stringify(merged));
-            return merged;
+        return {
+          id: String(b.id || b.bookingId || b.booking_id || b.orderId || b.order_id || fallbackId),
+          customerName: b.customerName || b.customer_name || b.userName || b.user_name || b.name || 'App Customer',
+          customerPhone: b.customerPhone || b.customer_phone || b.userPhone || b.user_phone || b.phone || '9832100000',
+          customerEmail: b.customerEmail || b.customer_email || b.userEmail || b.user_email || b.email || 'customer@durgapurfix.in',
+          serviceName: b.serviceName || b.service_name || b.serviceTitle || b.service_title || b.service || b.category || 'Home Service',
+          serviceId: b.serviceId || b.service_id || 'srv-1',
+          zone: b.zone || b.location || b.city || 'City Centre Zone',
+          address: b.customerAddress || b.customer_address || b.address || b.user_address || 'Durgapur, WB',
+          date: b.date || b.bookingDate || b.booking_date || new Date().toISOString().split('T')[0],
+          timeSlot: b.timeSlot || b.time_slot || b.time || b.slot || '10:00 AM - 12:00 PM',
+          status: normalizedStatus,
+          amount: Number(b.amount ?? b.price ?? b.totalAmount ?? b.total_amount ?? b.totalPrice ?? b.total ?? 399),
+          paymentStatus: b.paymentStatus || b.payment_status || 'pending',
+          paymentMode: b.paymentMode || b.payment_mode || b.paymentMethod || b.payment_method || 'Cash',
+          paymentConfirmedByPartner: Boolean(b.paymentConfirmedByPartner ?? b.payment_confirmed_by_partner),
+          paymentConfirmedAt: b.paymentConfirmedAt || b.payment_confirmed_at || undefined,
+          providerId: b.providerId || b.provider_id || b.technicianId || b.technician_id || undefined,
+          providerName: b.providerName || b.provider_name || b.technicianName || b.technician_name || undefined,
+          complaint: b.complaint || b.notes || b.instructions || undefined,
+          expenses: b.expenses || undefined,
+          providerFeedback: b.providerFeedback || b.provider_feedback || undefined,
+          createdAt: b.createdAt || b.created_at || b.timestamp || new Date().toISOString()
+        };
+      };
+
+      const handleIncomingBookings = (rawList: any[]) => {
+        if (!rawList || rawList.length === 0) return;
+        setOrders(prevOrders => {
+          const map = new Map<string, Order>();
+          prevOrders.forEach(o => map.set(String(o.id), o));
+          rawList.forEach((raw, idx) => {
+            const order = normalizeIncomingOrder(raw, `ord_${Date.now()}_${idx}`);
+            map.set(String(order.id), order);
           });
-        }
-      }));
+          const merged = Array.from(map.values()).sort((a, b) => 
+            new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+          );
+          localStorage.setItem('durgapur_orders', JSON.stringify(merged));
+          return merged;
+        });
+      };
+
+      // Listen to all possible order/booking collections from web and mobile apps
+      unsubs.push(subscribeToCollection<any>('orders', handleIncomingBookings));
+      unsubs.push(subscribeToCollection<any>('durgapur_bookings', handleIncomingBookings));
+      unsubs.push(subscribeToCollection<any>('bookings', handleIncomingBookings));
+      unsubs.push(subscribeToCollection<any>('durgapur_orders', handleIncomingBookings));
 
       unsubs.push(subscribeToCollection<CustomerUser>('users', (items) => {
         if (items && items.length > 0) {
@@ -396,6 +409,13 @@ export default function App() {
       status: verified ? 'verified' : 'pending',
       verified
     }).catch(() => {});
+  };
+
+  const handleDeleteAppUser = (userId: string) => {
+    const updated = appUsers.filter(u => u.id !== userId);
+    setAppUsers(updated);
+    localStorage.setItem('durgapur_app_users', JSON.stringify(updated));
+    removeDocFromFirestore('durgapur_users', userId).catch(() => {});
   };
 
   // Auth triggers
@@ -588,6 +608,7 @@ export default function App() {
           appUsers={appUsers}
           notifications={notifications}
           onVerifyUser={handleVerifyAppUser}
+          onDeleteAppUser={handleDeleteAppUser}
           onEditUserPhoto={(u) => openPhotoModal('user', u.id, u.name, u.avatar || DEFAULT_MAN_AVATAR)}
           onUpdateUsers={(updatedUsers) => updateAndPersist('users', updatedUsers, setUsers)}
           onUpdateNotifications={(updatedNotifs) => updateAndPersist('notifications', updatedNotifs, setNotifications)}
