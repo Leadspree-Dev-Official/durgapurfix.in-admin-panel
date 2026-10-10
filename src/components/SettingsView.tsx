@@ -9,7 +9,12 @@ import {
 } from 'lucide-react';
 import { HelpCenterFAQ, HelpCenterSettings } from '../types';
 import { checkBackendConnection, BackendConnectionResult } from '../lib/firebase';
-import { pushAllSeedDataToFirestore, SyncProgress } from '../lib/firestoreSync';
+import { 
+  pushAllSeedDataToFirestore, 
+  wipeAllFirestoreCollections, 
+  testFirestoreWritePermission, 
+  SyncProgress 
+} from '../lib/firestoreSync';
 import rawFirebaseConfig from '../../firebase-applet-config.json';
 
 interface SettingsViewProps {
@@ -29,6 +34,16 @@ interface SettingsViewProps {
     users: any[];
     settings: any;
   };
+  onProductionHandover?: (wipeCatalog: boolean) => Promise<void>;
+  onLoadDemoData?: () => void;
+  dataCounts?: {
+    orders: number;
+    users: number;
+    providers: number;
+    categories: number;
+    services: number;
+    sliders: number;
+  };
 }
 
 export default function SettingsView({
@@ -36,7 +51,10 @@ export default function SettingsView({
   settings,
   onUpdateSettings,
   onChangePhoto,
-  fullAppData
+  fullAppData,
+  onProductionHandover,
+  onLoadDemoData,
+  dataCounts
 }: SettingsViewProps) {
 
   const isGeneral = activeView === 'settings-general';
@@ -64,7 +82,18 @@ export default function SettingsView({
   const [isGuideOpen, setIsGuideOpen] = useState(true);
   const [isSyncingCloud, setIsSyncingCloud] = useState(false);
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
-  const [syncResult, setSyncResult] = useState<{ success: boolean; count: number; message: string } | null>(null);
+  const [syncResult, setSyncResult] = useState<{ 
+    success: boolean; 
+    count: number; 
+    message: string; 
+    isPermissionError?: boolean;
+  } | null>(null);
+  const [isTestingPermissions, setIsTestingPermissions] = useState(false);
+  const [permissionTestResult, setPermissionTestResult] = useState<{
+    allowed: boolean;
+    latencyMs?: number;
+    error?: string | null;
+  } | null>(null);
 
   // Policy & Help Center Sub-Tabs
   const [policySubTab, setPolicySubTab] = useState<'help' | 'refund' | 'terms' | 'privacy' | 'about' | 'receipt'>('help');
@@ -73,6 +102,65 @@ export default function SettingsView({
   const [newFaqA, setNewFaqA] = useState('');
   const [newFaqCategory, setNewFaqCategory] = useState('Bookings');
   const [showAddFaq, setShowAddFaq] = useState(false);
+
+  // Production Handover Manager State
+  const [handoverModal, setHandoverModal] = useState<{
+    isOpen: boolean;
+    type: 'clean' | 'total' | 'firestore' | 'demo';
+    title: string;
+    description: string;
+  } | null>(null);
+  const [isProcessingHandover, setIsProcessingHandover] = useState(false);
+  const [handoverMessage, setHandoverMessage] = useState<{ success: boolean; text: string } | null>(null);
+
+  const handleConfirmHandover = async () => {
+    if (!handoverModal) return;
+    setIsProcessingHandover(true);
+    setHandoverMessage(null);
+    try {
+      if (handoverModal.type === 'clean') {
+        if (onProductionHandover) {
+          await onProductionHandover(false);
+        }
+        setHandoverMessage({
+          success: true,
+          text: 'Clean Slate Production Ready! All demo orders, fake customers, dummy providers, and test transactions have been wiped to 0. Real bookings from the mobile app will appear here in real time.'
+        });
+      } else if (handoverModal.type === 'total') {
+        if (onProductionHandover) {
+          await onProductionHandover(true);
+        }
+        setHandoverMessage({
+          success: true,
+          text: 'Total 100% Factory Reset complete! Categories, services, sliders, coupons, zones, orders, users, and providers have all been wiped to 0.'
+        });
+      } else if (handoverModal.type === 'firestore') {
+        const res = await wipeAllFirestoreCollections(false);
+        setHandoverMessage({
+          success: res.success,
+          text: res.success 
+            ? `Successfully purged ${res.wipedCount} documents from Google Cloud Firestore! Database collections are now 100% clean.` 
+            : (res.error || 'Failed to wipe Firestore.')
+        });
+      } else if (handoverModal.type === 'demo') {
+        if (onLoadDemoData) {
+          onLoadDemoData();
+        }
+        setHandoverMessage({
+          success: true,
+          text: 'Sample demo dataset restored for testing purposes.'
+        });
+      }
+    } catch (e: any) {
+      setHandoverMessage({
+        success: false,
+        text: e?.message || 'Action failed.'
+      });
+    } finally {
+      setIsProcessingHandover(false);
+      setHandoverModal(null);
+    }
+  };
 
   const copyToClipboard = (text: string, keyName: string) => {
     navigator.clipboard.writeText(text);
@@ -92,30 +180,70 @@ export default function SettingsView({
 
     setIsSyncingCloud(true);
     setSyncResult(null);
+    setPermissionTestResult(null);
     try {
       const res = await pushAllSeedDataToFirestore(fullAppData, (p) => setSyncProgress(p));
       if (res.success) {
         setSyncResult({
           success: true,
           count: res.totalUploaded,
-          message: `Successfully synchronized ${res.totalUploaded} records to Firestore! Your mobile app can now fetch live categories, services, sliders, and orders.`
+          message: `Successfully synchronized ${res.totalUploaded} records to Firestore! Your mobile app can now fetch live categories, services, sliders, and orders.`,
+          isPermissionError: false
+        });
+      } else {
+        const isPerm = Boolean(res.isPermissionError) || 
+                       Boolean(res.error?.toLowerCase().includes('permission')) || 
+                       Boolean(res.error?.toLowerCase().includes('missing'));
+        setSyncResult({
+          success: false,
+          count: 0,
+          message: res.error || 'Failed to sync data to cloud.',
+          isPermissionError: isPerm
+        });
+      }
+    } catch (err: any) {
+      const msg = err?.message || 'Sync error occurred.';
+      const isPerm = msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('missing');
+      setSyncResult({
+        success: false,
+        count: 0,
+        message: msg,
+        isPermissionError: isPerm
+      });
+    } finally {
+      setIsSyncingCloud(false);
+      setSyncProgress(null);
+    }
+  };
+
+  const handleTestPermissions = async () => {
+    setIsTestingPermissions(true);
+    setPermissionTestResult(null);
+    try {
+      const res = await testFirestoreWritePermission();
+      setPermissionTestResult(res);
+      if (res.allowed) {
+        setSyncResult({
+          success: true,
+          count: 0,
+          message: `Write and delete permissions confirmed! (Verified in ${res.latencyMs}ms). Your Firestore database allows write operations. You can now click "Push All Data to Cloud".`,
+          isPermissionError: false
         });
       } else {
         setSyncResult({
           success: false,
           count: 0,
-          message: res.error || 'Failed to sync data to cloud.'
+          message: res.error || 'Write permission check failed.',
+          isPermissionError: res.isPermissionError
         });
       }
-    } catch (err: any) {
-      setSyncResult({
-        success: false,
-        count: 0,
-        message: err?.message || 'Sync error occurred.'
+    } catch (e: any) {
+      setPermissionTestResult({
+        allowed: false,
+        error: e?.message || 'Permission check failed'
       });
     } finally {
-      setIsSyncingCloud(false);
-      setSyncProgress(null);
+      setIsTestingPermissions(false);
     }
   };
 
@@ -597,16 +725,28 @@ export default function SettingsView({
                       Uploads all categories, services, sliders, zones, and orders to Firestore so your mobile app has real live records immediately.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handlePushAllToCloud}
-                    disabled={isSyncingCloud}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 via-indigo-600 to-blue-600 hover:from-blue-400 hover:to-indigo-500 text-white rounded-xl text-xs font-extrabold transition disabled:opacity-50 cursor-pointer shadow-md shrink-0 active:scale-95"
-                    id="settings-push-all-data-btn"
-                  >
-                    <CloudUpload className={`w-4 h-4 ${isSyncingCloud ? 'animate-bounce' : ''}`} />
-                    <span>{isSyncingCloud ? 'Pushing to Cloud...' : 'Push All Data to Cloud'}</span>
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleTestPermissions}
+                      disabled={isTestingPermissions || isSyncingCloud}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer shadow-sm active:scale-95"
+                      title="Test if Firebase Console security rules allow write & delete access"
+                    >
+                      <ShieldAlert className={`w-3.5 h-3.5 text-amber-400 ${isTestingPermissions ? 'animate-spin' : ''}`} />
+                      <span>{isTestingPermissions ? 'Testing...' : 'Test Permissions'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handlePushAllToCloud}
+                      disabled={isSyncingCloud}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 via-indigo-600 to-blue-600 hover:from-blue-400 hover:to-indigo-500 text-white rounded-xl text-xs font-extrabold transition disabled:opacity-50 cursor-pointer shadow-md shrink-0 active:scale-95"
+                      id="settings-push-all-data-btn"
+                    >
+                      <CloudUpload className={`w-4 h-4 ${isSyncingCloud ? 'animate-bounce' : ''}`} />
+                      <span>{isSyncingCloud ? 'Pushing to Cloud...' : 'Push All Data to Cloud'}</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Sync Progress or Results */}
@@ -626,18 +766,303 @@ export default function SettingsView({
                 )}
 
                 {syncResult && (
-                  <div className={`p-3 rounded-xl border flex items-start gap-2.5 text-xs font-medium ${
+                  <div className={`p-3.5 rounded-xl border flex flex-col gap-2.5 text-xs font-medium ${
                     syncResult.success 
                       ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-200' 
                       : 'bg-rose-950/50 border-rose-500/40 text-rose-200'
                   }`}>
-                    {syncResult.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> : <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />}
-                    <div>
-                      <p className="font-bold">{syncResult.success ? 'Cloud Synchronization Complete!' : 'Sync Issue'}</p>
-                      <p className="text-[11px] opacity-90 mt-0.5">{syncResult.message}</p>
+                    <div className="flex items-start gap-2.5">
+                      {syncResult.success ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                      )}
+                      <div className="flex-1">
+                        <p className="font-bold text-sm">{syncResult.success ? 'Success!' : 'Sync Issue: Missing Permission'}</p>
+                        <p className="text-[11px] opacity-90 mt-0.5 leading-relaxed">{syncResult.message}</p>
+                      </div>
                     </div>
+
+                    {/* INTERACTIVE FIRESTORE SECURITY RULES RESOLVER */}
+                    {(syncResult.isPermissionError || (!syncResult.success && syncResult.message?.toLowerCase().includes('permission'))) && (
+                      <div className="mt-2 p-3.5 bg-slate-900/90 border border-amber-500/50 rounded-xl text-slate-200 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 text-amber-300 font-bold text-xs">
+                            <ShieldAlert className="w-4 h-4 shrink-0 text-amber-400" />
+                            <span>How to Resolve "Missing Permission" in 30 Seconds</span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            Action Required
+                          </span>
+                        </div>
+
+                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                          Your Firebase project <strong className="text-white font-mono">{currentProjectId}</strong> was created under your external Firebase account. By default, Google locks Firestore rules (<code className="text-rose-300 bg-black/40 px-1 py-0.5 rounded">allow read, write: if false;</code>). You need to publish the rules once in your Firebase Console:
+                        </p>
+
+                        <div className="space-y-1.5 text-[11px]">
+                          <div className="flex items-center gap-2">
+                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0">1</span>
+                            <span>Click the button below to open the Firestore Rules tab in your Firebase Console:</span>
+                          </div>
+                          <div className="pl-6">
+                            <a
+                              href={`https://console.firebase.google.com/project/${currentProjectId}/firestore/rules`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-xs transition shadow-sm"
+                            >
+                              <span>Open Firebase Console Rules ({currentProjectId})</span>
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 text-[11px]">
+                          <div className="flex items-center gap-2">
+                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0">2</span>
+                            <span>Copy and paste this standard security rule into the editor:</span>
+                          </div>
+                          <div className="pl-6 space-y-1.5">
+                            <div className="relative">
+                              <pre className="p-2.5 bg-black/60 rounded-lg text-[10px] font-mono text-emerald-300 overflow-x-auto border border-slate-700">
+{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}`}
+                              </pre>
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(`rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if true;\n    }\n  }\n}`, 'permission_rule')}
+                                className="absolute top-2 right-2 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 rounded-md text-[10px] font-bold flex items-center gap-1 cursor-pointer transition"
+                              >
+                                {copiedKey === 'permission_rule' ? (
+                                  <>
+                                    <CheckCheck className="w-3 h-3 text-emerald-400" />
+                                    <span className="text-emerald-400">Copied!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3 h-3" />
+                                    <span>Copy Rule</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1 text-[11px]">
+                          <div className="flex items-center gap-2">
+                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0">3</span>
+                            <span>Click the blue <strong>"Publish"</strong> button in Firebase Console, then click:</span>
+                          </div>
+                          <div className="pl-6 flex items-center gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={handleTestPermissions}
+                              disabled={isTestingPermissions}
+                              className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                            >
+                              <RefreshCw className={`w-3.5 h-3.5 ${isTestingPermissions ? 'animate-spin' : ''}`} />
+                              <span>{isTestingPermissions ? 'Verifying...' : 'Verify & Test Permissions'}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handlePushAllToCloud}
+                              disabled={isSyncingCloud}
+                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                            >
+                              <CloudUpload className="w-3.5 h-3.5" />
+                              <span>Push All Data to Cloud</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
+              </div>
+
+              {/* PRODUCTION ADMIN HANDOVER & DATABASE ZERO-STATE CENTER */}
+              <div className="p-4 sm:p-5 bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950 text-white rounded-2xl border-2 border-indigo-500/50 shadow-xl space-y-4" id="admin-handover-center">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/40 shrink-0">
+                      <ShieldCheck className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-sm font-extrabold text-white">Production Admin Handover &amp; Database Zero-State</h4>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          Handover Mode Active
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-300 font-medium mt-0.5 max-w-2xl">
+                        Handing over to the client with zero dummy data? Google Cloud Firestore holds 0 documents until mobile users register or push data. Use the tools below to ensure the admin panel enters a 100% clean, professional production state.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live Count Summary */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 pt-1 text-[11px]">
+                  <div className="p-2.5 bg-slate-800/80 rounded-xl border border-slate-700">
+                    <span className="text-slate-400 block text-[10px] font-semibold uppercase">Active Orders</span>
+                    <span className="font-extrabold text-white text-base">
+                      {dataCounts?.orders ?? fullAppData?.orders?.length ?? 0}
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-slate-800/80 rounded-xl border border-slate-700">
+                    <span className="text-slate-400 block text-[10px] font-semibold uppercase">Customers</span>
+                    <span className="font-extrabold text-white text-base">
+                      {dataCounts?.users ?? fullAppData?.users?.length ?? 0}
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-slate-800/80 rounded-xl border border-slate-700">
+                    <span className="text-slate-400 block text-[10px] font-semibold uppercase">Service Providers</span>
+                    <span className="font-extrabold text-white text-base">
+                      {dataCounts?.providers ?? fullAppData?.providers?.length ?? 0}
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-slate-800/80 rounded-xl border border-slate-700">
+                    <span className="text-slate-400 block text-[10px] font-semibold uppercase">Categories</span>
+                    <span className="font-extrabold text-emerald-400 text-base">
+                      {dataCounts?.categories ?? fullAppData?.categories?.length ?? 0}
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-slate-800/80 rounded-xl border border-slate-700">
+                    <span className="text-slate-400 block text-[10px] font-semibold uppercase">Services</span>
+                    <span className="font-extrabold text-emerald-400 text-base">
+                      {dataCounts?.services ?? fullAppData?.services?.length ?? 0}
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-slate-800/80 rounded-xl border border-slate-700">
+                    <span className="text-slate-400 block text-[10px] font-semibold uppercase">Cloud Database</span>
+                    <span className="font-extrabold text-indigo-300 text-xs truncate block mt-1">
+                      {currentProjectId}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Handover Notice / Feedback */}
+                {handoverMessage && (
+                  <div className={`p-3 rounded-xl border text-xs font-semibold flex items-center gap-2 ${
+                    handoverMessage.success 
+                      ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-200' 
+                      : 'bg-rose-950/60 border-rose-500/50 text-rose-200'
+                  }`}>
+                    {handoverMessage.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> : <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />}
+                    <span>{handoverMessage.text}</span>
+                  </div>
+                )}
+
+                {/* Actions Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2 border-t border-slate-800">
+                  {/* Action 1: Recommended Handover Clean Slate */}
+                  <div className="p-3 bg-slate-800/60 border border-slate-700/80 rounded-xl flex flex-col justify-between space-y-2.5">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <span>Clean Slate Handover</span>
+                      </div>
+                      <p className="text-[10px] text-slate-300 mt-1 leading-relaxed">
+                        Wipes dummy orders, customers, providers, and test transactions to <strong>0</strong>. Preserves service categories so your catalog stays ready.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setHandoverModal({
+                        isOpen: true,
+                        type: 'clean',
+                        title: 'Confirm Clean Slate for Admin Handover',
+                        description: 'This will reset all orders, customer accounts, provider records, reviews, and transaction ledgers to 0. Categories and services will be preserved so the admin does not need to recreate them.'
+                      })}
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer active:scale-95 text-center"
+                    >
+                      Reset to Clean Slate (0 Orders)
+                    </button>
+                  </div>
+
+                  {/* Action 2: Total Blank Slate (Wipe Catalog Too) */}
+                  <div className="p-3 bg-slate-800/60 border border-slate-700/80 rounded-xl flex flex-col justify-between space-y-2.5">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-rose-300">
+                        <Trash2 className="w-4 h-4 text-rose-400" />
+                        <span>Total 100% Wipeout</span>
+                      </div>
+                      <p className="text-[10px] text-slate-300 mt-1 leading-relaxed">
+                        Wipes <strong>everything</strong>: categories, services, sliders, coupons, zones, orders, and users. Start from absolute scratch.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setHandoverModal({
+                        isOpen: true,
+                        type: 'total',
+                        title: 'Confirm Total 100% Factory Reset',
+                        description: 'WARNING: This will wipe all categories, services, promo sliders, coupons, zones, orders, users, and providers to 0. The admin will start with a completely empty catalog.'
+                      })}
+                      className="w-full py-2 bg-rose-600/90 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer active:scale-95 text-center"
+                    >
+                      Wipe Everything (0 Data)
+                    </button>
+                  </div>
+
+                  {/* Action 3: Wipe Cloud Firestore */}
+                  <div className="p-3 bg-slate-800/60 border border-slate-700/80 rounded-xl flex flex-col justify-between space-y-2.5">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-300">
+                        <Database className="w-4 h-4 text-indigo-400" />
+                        <span>Wipe Cloud Firestore</span>
+                      </div>
+                      <p className="text-[10px] text-slate-300 mt-1 leading-relaxed">
+                        Deletes any documents currently stored in Google Cloud Firestore collections (<span className="font-mono text-slate-200">orders, users, providers</span>).
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setHandoverModal({
+                        isOpen: true,
+                        type: 'firestore',
+                        title: 'Confirm Cloud Firestore Wipe',
+                        description: 'This will purge all documents in your live Google Cloud Firestore database (orders, users, providers, bookings). Use this before handing over to ensure Firebase has 0 documents.'
+                      })}
+                      className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer active:scale-95 text-center"
+                    >
+                      Purge Cloud Database
+                    </button>
+                  </div>
+
+                  {/* Action 4: Restore Sample Demo Data (Test Mode) */}
+                  <div className="p-3 bg-slate-800/60 border border-slate-700/80 rounded-xl flex flex-col justify-between space-y-2.5">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+                        <RefreshCw className="w-4 h-4 text-amber-400" />
+                        <span>Load Sample Demo Data</span>
+                      </div>
+                      <p className="text-[10px] text-slate-300 mt-1 leading-relaxed">
+                        Developer test tool: reloads sample orders, demo users, and test providers for evaluation or staging demonstration.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setHandoverModal({
+                        isOpen: true,
+                        type: 'demo',
+                        title: 'Load Sample Demo Data',
+                        description: 'This will populate sample mock orders, demo customer accounts, and demo service providers for testing purposes.'
+                      })}
+                      className="w-full py-2 bg-slate-700 hover:bg-slate-600 text-amber-200 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer active:scale-95 text-center"
+                    >
+                      Restore Test Demo Data
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* SHARED MOBILE APP & WEB ADMIN INTEGRATION CENTER */}
@@ -1597,6 +2022,60 @@ db.collection("orders").addSnapshotListener { snapshot, e ->
           </div>
         </form>
       </div>
+
+      {/* Handover In-App Confirmation Modal */}
+      {handoverModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-xl ${
+                handoverModal.type === 'total' ? 'bg-rose-100 text-rose-600' :
+                handoverModal.type === 'clean' ? 'bg-emerald-100 text-emerald-600' :
+                handoverModal.type === 'firestore' ? 'bg-indigo-100 text-indigo-600' :
+                'bg-amber-100 text-amber-600'
+              }`}>
+                {handoverModal.type === 'total' ? <Trash2 className="w-5 h-5" /> :
+                 handoverModal.type === 'clean' ? <ShieldCheck className="w-5 h-5" /> :
+                 handoverModal.type === 'firestore' ? <Database className="w-5 h-5" /> :
+                 <RefreshCw className="w-5 h-5" />}
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">{handoverModal.title}</h3>
+                <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Production Maintenance</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              {handoverModal.description}
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setHandoverModal(null)}
+                disabled={isProcessingHandover}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmHandover}
+                disabled={isProcessingHandover}
+                className={`px-5 py-2 text-xs font-bold text-white rounded-xl shadow-xs transition cursor-pointer flex items-center gap-2 ${
+                  handoverModal.type === 'total' ? 'bg-rose-600 hover:bg-rose-700' :
+                  handoverModal.type === 'clean' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                  handoverModal.type === 'firestore' ? 'bg-indigo-600 hover:bg-indigo-700' :
+                  'bg-amber-600 hover:bg-amber-700'
+                }`}
+              >
+                {isProcessingHandover && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                <span>{isProcessingHandover ? 'Processing...' : 'Confirm Action'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

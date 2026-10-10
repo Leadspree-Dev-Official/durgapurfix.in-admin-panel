@@ -66,7 +66,7 @@ export async function pushAllSeedDataToFirestore(
     settings: any;
   },
   onProgress?: (progress: SyncProgress) => void
-): Promise<{ success: boolean; totalUploaded: number; error?: string }> {
+): Promise<{ success: boolean; totalUploaded: number; error?: string; isPermissionError?: boolean }> {
   if (!db) {
     throw new Error('Firestore is not initialized. Please check your Firebase configuration.');
   }
@@ -140,7 +140,65 @@ export async function pushAllSeedDataToFirestore(
     return { success: true, totalUploaded: completedCount };
   } catch (err: any) {
     console.error('Error syncing to Firestore:', err);
-    return { success: false, totalUploaded: 0, error: err?.message || 'Upload failed' };
+    const msg = err?.message || String(err);
+    const isPermissionError = 
+      err?.code === 'permission-denied' || 
+      msg.toLowerCase().includes('permission') || 
+      msg.toLowerCase().includes('missing or insufficient');
+
+    return { 
+      success: false, 
+      totalUploaded: 0, 
+      isPermissionError,
+      error: isPermissionError 
+        ? 'Missing or insufficient permissions: Firestore security rules in your Firebase Console (durgapurfix-1935c) are locked. Update rules to allow read/write and click Publish.'
+        : (msg || 'Upload failed') 
+    };
+  }
+}
+
+/**
+ * Tests live Firestore write and delete permissions using a harmless test document.
+ */
+export async function testFirestoreWritePermission(): Promise<{ 
+  allowed: boolean; 
+  latencyMs: number; 
+  error: string | null; 
+  isPermissionError: boolean;
+}> {
+  if (!db) {
+    return { allowed: false, latencyMs: 0, error: 'Database client not initialized', isPermissionError: false };
+  }
+
+  const startTime = Date.now();
+  try {
+    const testDocRef = doc(db, '_connection_test', 'permission_ping');
+    await setDoc(testDocRef, { timestamp: Date.now(), test: true, initiatedBy: 'admin_panel' });
+    // Clean up immediately
+    try {
+      await deleteDoc(testDocRef);
+    } catch (delErr) {
+      console.warn('Test document cleanup deferred:', delErr);
+    }
+    return {
+      allowed: true,
+      latencyMs: Date.now() - startTime,
+      error: null,
+      isPermissionError: false
+    };
+  } catch (err: any) {
+    const msg = err?.message || String(err);
+    const isPermissionError = 
+      err?.code === 'permission-denied' || 
+      msg.toLowerCase().includes('permission') || 
+      msg.toLowerCase().includes('missing or insufficient');
+
+    return {
+      allowed: false,
+      latencyMs: Date.now() - startTime,
+      error: msg,
+      isPermissionError
+    };
   }
 }
 
@@ -232,4 +290,45 @@ export function subscribeToCollection<T>(
   );
 
   return unsubscribe;
+}
+
+/**
+ * Wipes Firestore collections for a clean handover to the production admin.
+ */
+export async function wipeAllFirestoreCollections(includeCatalog = false): Promise<{ success: boolean; wipedCount: number; error?: string }> {
+  if (!db) {
+    return { success: false, wipedCount: 0, error: 'Database not initialized' };
+  }
+
+  const collectionsToWipe = [
+    'orders', 'durgapur_bookings', 'bookings', 'durgapur_orders',
+    'users', 'durgapur_users',
+    'providers', 'durgapur_professionals',
+    'reviews', 'payments', 'withdrawals', 'notifications'
+  ];
+
+  if (includeCatalog) {
+    collectionsToWipe.push('categories', 'durgapur_categories', 'subcategories', 'services', 'zones', 'coupons', 'sliders', 'durgapur_sliders');
+  }
+
+  let totalDeleted = 0;
+
+  for (const colName of collectionsToWipe) {
+    try {
+      const colRef = collection(db, colName);
+      const snapshot = await getDocs(colRef);
+      if (snapshot.empty) continue;
+
+      const batch = writeBatch(db);
+      snapshot.forEach(docSnap => {
+        batch.delete(docSnap.ref);
+        totalDeleted++;
+      });
+      await batch.commit();
+    } catch (e) {
+      console.warn(`Error wiping ${colName}:`, e);
+    }
+  }
+
+  return { success: true, wipedCount: totalDeleted };
 }

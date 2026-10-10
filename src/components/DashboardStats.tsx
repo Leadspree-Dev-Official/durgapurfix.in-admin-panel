@@ -82,15 +82,15 @@ export default function DashboardStats({
     setIsSyncing(true);
     setSyncStatus({ type: 'progress', message: 'Connecting to Firestore and uploading collections...' });
     try {
-      const cats = categories && categories.length > 0 ? categories : initialCategories;
-      const subs = subCategories && subCategories.length > 0 ? subCategories : initialSubCategories;
-      const zns = zones && zones.length > 0 ? zones : initialZones;
-      const cpns = coupons && coupons.length > 0 ? coupons : initialCoupons;
-      const slds = sliders && sliders.length > 0 ? sliders : initialSliders;
-      const srvs = services && services.length > 0 ? services : initialServices;
-      const provs = providers && providers.length > 0 ? providers : initialProviders;
-      const ords = orders && orders.length > 0 ? orders : initialOrders;
-      const usrs = users && users.length > 0 ? users : initialUsers;
+      const cats = categories || [];
+      const subs = subCategories || [];
+      const zns = zones || [];
+      const cpns = coupons || [];
+      const slds = sliders || [];
+      const srvs = services || [];
+      const provs = providers || [];
+      const ords = orders || [];
+      const usrs = users || [];
       const stgs = settings || defaultSettings;
 
       const result = await pushAllSeedDataToFirestore({
@@ -133,9 +133,9 @@ export default function DashboardStats({
   };
 
   // Core Counts
-  const totalCategoriesCount = 8; // Modeled exactly like screenshot
-  const totalFestivalsCount = 2; // Modeled exactly like screenshot (e.g. active zones)
-  const totalBusinessCount = providers.length + 9; // Modeled to show a high contrast value like 14 in the screenshot
+  const totalCategoriesCount = categories ? categories.length : 0;
+  const totalFestivalsCount = zones ? zones.length : 0;
+  const totalBusinessCount = providers.length;
 
   // Calculations for requested metrics
   const totalUsersCount = users.length;
@@ -158,17 +158,21 @@ export default function DashboardStats({
   const activeProvidersWithRating = providers.filter(p => p.rating > 0);
   const avgProviderRating = activeProvidersWithRating.length > 0 
     ? (activeProvidersWithRating.reduce((sum, p) => sum + p.rating, 0) / activeProvidersWithRating.length).toFixed(1)
-    : '4.8';
+    : '0.0';
 
   // Months list for charts x-axis
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   
   // Custom Line Chart Data: Monthly Payments
-  const paymentChartData = [450, 800, 150, 1100, 600, 1400, totalPaymentsAmount || 1998, 0, 0, 0, 0, 0];
+  const paymentChartData = totalPaymentsAmount > 0 
+    ? [450, 800, 150, 1100, 600, 1400, totalPaymentsAmount, 0, 0, 0, 0, 0]
+    : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
   const maxPaymentVal = Math.max(...paymentChartData, 2000);
 
   // Custom Bar Chart Data: Monthly Users registrations
-  const userChartData = [8, 12, 14, 19, 22, 28, totalUsersCount, 0, 0, 0, 0, 0];
+  const userChartData = totalUsersCount > 0
+    ? [8, 12, 14, 19, 22, 28, totalUsersCount, 0, 0, 0, 0, 0]
+    : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
   const maxUserVal = Math.max(...userChartData, 40);
 
   return (
@@ -193,7 +197,7 @@ export default function DashboardStats({
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                Shared cloud database for your <strong>Mobile App</strong> &amp; <strong>Web Admin</strong>. All 44 core records (categories, services, pricing, zones, orders) are stored live in your Firebase project.
+                Shared cloud database for your <strong>Mobile App</strong> &amp; <strong>Web Admin</strong>. Portal status: {totalCategoriesCount} categories, {totalServicesCount} services, {totalOrdersCount} active orders, {totalUsersCount} users.
               </p>
             </div>
           </div>

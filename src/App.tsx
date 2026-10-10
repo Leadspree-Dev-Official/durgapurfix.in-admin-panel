@@ -39,7 +39,36 @@ import { getDefaultAvatar, DEFAULT_MAN_AVATAR } from './data/avengers';
 import { db, auth } from './lib/firebase';
 import { doc, getDocFromServer, onSnapshot } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
-import { syncDocToFirestore, removeDocFromFirestore, subscribeToCollection } from './lib/firestoreSync';
+import { syncDocToFirestore, removeDocFromFirestore, subscribeToCollection, wipeAllFirestoreCollections } from './lib/firestoreSync';
+
+// Tombstone set to prevent deleted records from resurrecting when synced from stale snapshots
+const getDeletedIdsSet = (): Set<string> => {
+  try {
+    const raw = localStorage.getItem('durgapur_deleted_ids');
+    if (raw) return new Set(JSON.parse(raw));
+  } catch (e) {}
+  return new Set();
+};
+
+const recordDeletedId = (...ids: (string | number | undefined | null)[]) => {
+  try {
+    const set = getDeletedIdsSet();
+    ids.forEach(id => {
+      if (id !== undefined && id !== null && String(id).trim() !== '') {
+        set.add(String(id));
+      }
+    });
+    localStorage.setItem('durgapur_deleted_ids', JSON.stringify(Array.from(set)));
+  } catch (e) {}
+};
+
+const isItemDeleted = (item: any, deletedIds: Set<string>): boolean => {
+  if (!item) return false;
+  const candidateIds = [
+    item.id, item.bookingId, item.booking_id, item.orderId, item.order_id, item.uid, item._id
+  ].filter(Boolean).map(String);
+  return candidateIds.some(id => deletedIds.has(id));
+};
 
 export default function App() {
   // Session State
@@ -149,34 +178,75 @@ export default function App() {
 
   // Load from LocalStorage or seed defaults
   useEffect(() => {
+    // Production Handover Mode is the default for a clean handover to the admin.
+    // Demo mock data is ONLY loaded if explicitly requested via 'durgapur_demo_mode' === 'true'.
+    const isDemoMode = localStorage.getItem('durgapur_demo_mode') === 'true';
+    const isWipeCatalog = localStorage.getItem('durgapur_production_handover_wipe_catalog') === 'true';
+    const isCleanHandover = !isDemoMode;
+
     const loadOrSeed = <T,>(key: string, seed: T, setter: React.Dispatch<React.SetStateAction<T>>) => {
       const stored = localStorage.getItem(`durgapur_${key}`);
+      const deletedIds = getDeletedIdsSet();
       if (stored) {
         try {
-          setter(JSON.parse(stored));
+          const parsed = JSON.parse(stored);
+          // If clean handover is active, purge any leftover dummy mock IDs
+          if (isCleanHandover && ['orders', 'users', 'providers', 'reviews', 'payments', 'withdrawals', 'notifications', 'loginlogs'].includes(key)) {
+            const hasMockItems = Array.isArray(parsed) && parsed.some((item: any) => 
+              typeof item?.id === 'string' && (
+                item.id.startsWith('ord-100') || 
+                item.id.startsWith('usr-') || 
+                item.id.startsWith('prov-') || 
+                item.id.startsWith('rev-') || 
+                item.id.startsWith('pay-') ||
+                item.id.startsWith('wdr-') ||
+                item.id.startsWith('notif-') ||
+                item.id.startsWith('log-')
+              )
+            );
+            if (hasMockItems) {
+              setter([] as unknown as T);
+              localStorage.setItem(`durgapur_${key}`, JSON.stringify([]));
+              return;
+            }
+          }
+          if (Array.isArray(parsed)) {
+            const cleanList = parsed.filter((item: any) => !isItemDeleted(item, deletedIds));
+            setter(cleanList as unknown as T);
+          } else {
+            setter(parsed);
+          }
         } catch (e) {
           setter(seed);
         }
       } else {
-        setter(seed);
-        localStorage.setItem(`durgapur_${key}`, JSON.stringify(seed));
+        if (Array.isArray(seed)) {
+          const cleanSeed = (seed as any[]).filter((item: any) => !isItemDeleted(item, deletedIds));
+          setter(cleanSeed as unknown as T);
+          localStorage.setItem(`durgapur_${key}`, JSON.stringify(cleanSeed));
+        } else {
+          setter(seed);
+          localStorage.setItem(`durgapur_${key}`, JSON.stringify(seed));
+        }
       }
     };
 
-    loadOrSeed('categories', initialCategories, setCategories);
-    loadOrSeed('subcategories', initialSubCategories, setSubCategories);
-    loadOrSeed('zones', initialZones, setZones);
-    loadOrSeed('coupons', initialCoupons, setCoupons);
-    loadOrSeed('sliders', initialSliders, setSliders);
-    loadOrSeed('reviews', initialReviews, setReviews);
-    loadOrSeed('services', initialServices, setServices);
-    loadOrSeed('orders', initialOrders, setOrders);
-    loadOrSeed('users', initialUsers, setUsers);
-    loadOrSeed('providers', initialProviders, setProviders);
-    loadOrSeed('payments', initialPayments, setPayments);
-    loadOrSeed('withdrawals', initialWithdrawals, setWithdrawals);
-    loadOrSeed('notifications', initialNotifications, setNotifications);
-    loadOrSeed('loginlogs', initialLoginLogs, setLoginLogs);
+    loadOrSeed('categories', isWipeCatalog ? [] : initialCategories, setCategories);
+    loadOrSeed('subcategories', isWipeCatalog ? [] : initialSubCategories, setSubCategories);
+    loadOrSeed('zones', isWipeCatalog ? [] : initialZones, setZones);
+    loadOrSeed('coupons', isWipeCatalog ? [] : initialCoupons, setCoupons);
+    loadOrSeed('sliders', isWipeCatalog ? [] : initialSliders, setSliders);
+    loadOrSeed('services', isWipeCatalog ? [] : initialServices, setServices);
+
+    // Activity, customers, providers, and orders start with [] (ZERO DATA) for clean admin handover
+    loadOrSeed('reviews', isCleanHandover ? [] : initialReviews, setReviews);
+    loadOrSeed('orders', isCleanHandover ? [] : initialOrders, setOrders);
+    loadOrSeed('users', isCleanHandover ? [] : initialUsers, setUsers);
+    loadOrSeed('providers', isCleanHandover ? [] : initialProviders, setProviders);
+    loadOrSeed('payments', isCleanHandover ? [] : initialPayments, setPayments);
+    loadOrSeed('withdrawals', isCleanHandover ? [] : initialWithdrawals, setWithdrawals);
+    loadOrSeed('notifications', isCleanHandover ? [] : initialNotifications, setNotifications);
+    loadOrSeed('loginlogs', isCleanHandover ? [] : initialLoginLogs, setLoginLogs);
     loadOrSeed('settings', defaultSettings, setSettings);
 
     // Retrieve active user session if exists
@@ -191,45 +261,45 @@ export default function App() {
     const unsubs: (() => void)[] = [];
     if (db) {
       unsubs.push(subscribeToCollection<ServiceCategory>('categories', (items) => {
-        if (items && items.length > 0) {
-          setCategories(items);
-          localStorage.setItem('durgapur_categories', JSON.stringify(items));
-        }
+        const deletedIds = getDeletedIdsSet();
+        const filtered = (items || []).filter(i => !deletedIds.has(String(i.id)));
+        setCategories(filtered);
+        localStorage.setItem('durgapur_categories', JSON.stringify(filtered));
       }));
 
       unsubs.push(subscribeToCollection<ServiceSubCategory>('subcategories', (items) => {
-        if (items && items.length > 0) {
-          setSubCategories(items);
-          localStorage.setItem('durgapur_subcategories', JSON.stringify(items));
-        }
+        const deletedIds = getDeletedIdsSet();
+        const filtered = (items || []).filter(i => !deletedIds.has(String(i.id)));
+        setSubCategories(filtered);
+        localStorage.setItem('durgapur_subcategories', JSON.stringify(filtered));
       }));
 
       unsubs.push(subscribeToCollection<Zone>('zones', (items) => {
-        if (items && items.length > 0) {
-          setZones(items);
-          localStorage.setItem('durgapur_zones', JSON.stringify(items));
-        }
+        const deletedIds = getDeletedIdsSet();
+        const filtered = (items || []).filter(i => !deletedIds.has(String(i.id)));
+        setZones(filtered);
+        localStorage.setItem('durgapur_zones', JSON.stringify(filtered));
       }));
 
       unsubs.push(subscribeToCollection<Coupon>('coupons', (items) => {
-        if (items && items.length > 0) {
-          setCoupons(items);
-          localStorage.setItem('durgapur_coupons', JSON.stringify(items));
-        }
+        const deletedIds = getDeletedIdsSet();
+        const filtered = (items || []).filter(i => !deletedIds.has(String(i.id)));
+        setCoupons(filtered);
+        localStorage.setItem('durgapur_coupons', JSON.stringify(filtered));
       }));
 
       unsubs.push(subscribeToCollection<Slider>('sliders', (items) => {
-        if (items && items.length > 0) {
-          setSliders(items);
-          localStorage.setItem('durgapur_sliders', JSON.stringify(items));
-        }
+        const deletedIds = getDeletedIdsSet();
+        const filtered = (items || []).filter(i => !deletedIds.has(String(i.id)));
+        setSliders(filtered);
+        localStorage.setItem('durgapur_sliders', JSON.stringify(filtered));
       }));
 
       unsubs.push(subscribeToCollection<ServiceItem>('services', (items) => {
-        if (items && items.length > 0) {
-          setServices(items);
-          localStorage.setItem('durgapur_services', JSON.stringify(items));
-        }
+        const deletedIds = getDeletedIdsSet();
+        const filtered = (items || []).filter(i => !deletedIds.has(String(i.id)));
+        setServices(filtered);
+        localStorage.setItem('durgapur_services', JSON.stringify(filtered));
       }));
 
       // Unified order normalizer for web and mobile app payloads
@@ -267,69 +337,88 @@ export default function App() {
         };
       };
 
-      const handleIncomingBookings = (rawList: any[]) => {
-        if (!rawList || rawList.length === 0) return;
-        setOrders(prevOrders => {
-          const map = new Map<string, Order>();
-          prevOrders.forEach(o => map.set(String(o.id), o));
-          rawList.forEach((raw, idx) => {
-            const order = normalizeIncomingOrder(raw, `ord_${Date.now()}_${idx}`);
-            map.set(String(order.id), order);
+      const ordersBySource: Record<string, Order[]> = {
+        orders: [],
+        durgapur_bookings: [],
+        bookings: [],
+        durgapur_orders: []
+      };
+
+      const syncAllOrders = () => {
+        const deletedIds = getDeletedIdsSet();
+        const map = new Map<string, Order>();
+        Object.values(ordersBySource).forEach(list => {
+          list.forEach(ord => {
+            if (!isItemDeleted(ord, deletedIds)) {
+              map.set(String(ord.id), ord);
+            }
           });
-          const merged = Array.from(map.values()).sort((a, b) => 
-            new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-          );
-          localStorage.setItem('durgapur_orders', JSON.stringify(merged));
-          return merged;
         });
+        const combined = Array.from(map.values()).sort((a, b) => 
+          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+        );
+        // Sync cleanly with state
+        setOrders(combined);
+        localStorage.setItem('durgapur_orders', JSON.stringify(combined));
+      };
+
+      const handleSourceUpdate = (sourceName: string, rawList: any[]) => {
+        const deletedIds = getDeletedIdsSet();
+        ordersBySource[sourceName] = (rawList || [])
+          .filter(raw => !isItemDeleted(raw, deletedIds))
+          .map((raw, idx) => normalizeIncomingOrder(raw, `ord_${sourceName}_${idx}`));
+        syncAllOrders();
       };
 
       // Listen to all possible order/booking collections from web and mobile apps
-      unsubs.push(subscribeToCollection<any>('orders', handleIncomingBookings));
-      unsubs.push(subscribeToCollection<any>('durgapur_bookings', handleIncomingBookings));
-      unsubs.push(subscribeToCollection<any>('bookings', handleIncomingBookings));
-      unsubs.push(subscribeToCollection<any>('durgapur_orders', handleIncomingBookings));
+      unsubs.push(subscribeToCollection<any>('orders', (list) => handleSourceUpdate('orders', list)));
+      unsubs.push(subscribeToCollection<any>('durgapur_bookings', (list) => handleSourceUpdate('durgapur_bookings', list)));
+      unsubs.push(subscribeToCollection<any>('bookings', (list) => handleSourceUpdate('bookings', list)));
+      unsubs.push(subscribeToCollection<any>('durgapur_orders', (list) => handleSourceUpdate('durgapur_orders', list)));
 
       unsubs.push(subscribeToCollection<CustomerUser>('users', (items) => {
-        if (items && items.length > 0) {
-          setUsers(items);
-          localStorage.setItem('durgapur_users', JSON.stringify(items));
-        }
+        const deletedIds = getDeletedIdsSet();
+        const filtered = (items || []).filter(u => !isItemDeleted(u, deletedIds));
+        setUsers(filtered);
+        localStorage.setItem('durgapur_users', JSON.stringify(filtered));
       }));
 
       // Listen to Android Mobile App registered users (durgapur_users)
       unsubs.push(subscribeToCollection<any>('durgapur_users', (mobileUsers) => {
-        const mapped: CustomerUser[] = (mobileUsers || []).map((u: any) => ({
-          id: u.id || u.uid || `mu_${Math.random().toString(36).slice(2, 8)}`,
-          name: u.name || 'App Customer',
-          email: u.email || '',
-          phone: u.phone || u.phone10 || '',
-          avatar: u.avatar,
-          gender: u.gender,
-          status: 'active' as const,
-          joinDate: u.createdAt
-            ? new Date(Number(u.createdAt)).toISOString().split('T')[0]
-            : new Date().toISOString().split('T')[0],
-          ordersCount: 0,
-          verified: u.verified === true || u.status === 'verified',
-          source: 'app' as const
-        }));
+        const deletedIds = getDeletedIdsSet();
+        const mapped: CustomerUser[] = (mobileUsers || [])
+          .filter(u => !isItemDeleted(u, deletedIds))
+          .map((u: any) => ({
+            id: u.id || u.uid || `mu_${Math.random().toString(36).slice(2, 8)}`,
+            name: u.name || 'App Customer',
+            email: u.email || '',
+            phone: u.phone || u.phone10 || '',
+            avatar: u.avatar,
+            gender: u.gender,
+            status: 'active' as const,
+            joinDate: u.createdAt
+              ? new Date(Number(u.createdAt)).toISOString().split('T')[0]
+              : new Date().toISOString().split('T')[0],
+            ordersCount: 0,
+            verified: u.verified === true || u.status === 'verified',
+            source: 'app' as const
+          }));
         setAppUsers(mapped);
         localStorage.setItem('durgapur_app_users', JSON.stringify(mapped));
       }));
 
       unsubs.push(subscribeToCollection<ServiceProvider>('providers', (items) => {
-        if (items && items.length > 0) {
-          setProviders(items);
-          localStorage.setItem('durgapur_providers', JSON.stringify(items));
-        }
+        const deletedIds = getDeletedIdsSet();
+        const filtered = (items || []).filter(p => !deletedIds.has(String(p.id)));
+        setProviders(filtered);
+        localStorage.setItem('durgapur_providers', JSON.stringify(filtered));
       }));
 
       unsubs.push(subscribeToCollection<UserNotification>('notifications', (items) => {
-        if (items && items.length > 0) {
-          setNotifications(items);
-          localStorage.setItem('durgapur_notifications', JSON.stringify(items));
-        }
+        const deletedIds = getDeletedIdsSet();
+        const filtered = (items || []).filter(n => !deletedIds.has(String(n.id)));
+        setNotifications(filtered);
+        localStorage.setItem('durgapur_notifications', JSON.stringify(filtered));
       }));
 
       try {
@@ -377,6 +466,14 @@ export default function App() {
             const currentIds = new Set(data.map((item: any) => String(item?.id)));
             prevItems.forEach((prevItem: any) => {
               if (prevItem?.id && !currentIds.has(String(prevItem.id))) {
+                recordDeletedId(
+                  prevItem.id,
+                  prevItem.bookingId,
+                  prevItem.booking_id,
+                  prevItem.orderId,
+                  prevItem.order_id,
+                  prevItem.uid
+                );
                 removeDocFromFirestore(key, String(prevItem.id)).catch(() => {});
               }
             });
@@ -416,6 +513,115 @@ export default function App() {
     setAppUsers(updated);
     localStorage.setItem('durgapur_app_users', JSON.stringify(updated));
     removeDocFromFirestore('durgapur_users', userId).catch(() => {});
+  };
+
+  // One-click clean slate factory reset for production handover to admin
+  const handleProductionHandover = async (wipeCatalog: boolean) => {
+    localStorage.removeItem('durgapur_demo_mode');
+    localStorage.setItem('durgapur_production_handover', 'true');
+    if (wipeCatalog) {
+      localStorage.setItem('durgapur_production_handover_wipe_catalog', 'true');
+    } else {
+      localStorage.removeItem('durgapur_production_handover_wipe_catalog');
+    }
+
+    const activityKeys = [
+      'orders', 'users', 'app_users', 'providers', 'reviews',
+      'payments', 'withdrawals', 'notifications', 'loginlogs'
+    ];
+    activityKeys.forEach(k => {
+      localStorage.setItem(`durgapur_${k}`, JSON.stringify([]));
+    });
+
+    setOrders([]);
+    setUsers([]);
+    setAppUsers([]);
+    setProviders([]);
+    setReviews([]);
+    setPayments([]);
+    setWithdrawals([]);
+    setNotifications([]);
+    setLoginLogs([]);
+
+    // Tombstone all initial demo IDs so that stale server documents never reappear
+    const idsToTombstone: (string | number)[] = [
+      ...initialOrders.map(o => o.id),
+      ...initialUsers.map(u => u.id),
+      ...initialProviders.map(p => p.id),
+      ...initialReviews.map(r => r.id),
+      ...initialPayments.map(p => p.id),
+      ...initialWithdrawals.map(w => w.id),
+      ...initialNotifications.map(n => n.id),
+      ...initialLoginLogs.map(l => l.id),
+    ];
+
+    if (wipeCatalog) {
+      ['categories', 'subcategories', 'services', 'zones', 'coupons', 'sliders'].forEach(k => {
+        localStorage.setItem(`durgapur_${k}`, JSON.stringify([]));
+      });
+      setCategories([]);
+      setSubCategories([]);
+      setServices([]);
+      setZones([]);
+      setCoupons([]);
+      setSliders([]);
+
+      idsToTombstone.push(
+        ...initialCategories.map(c => c.id),
+        ...initialSubCategories.map(s => s.id),
+        ...initialServices.map(s => s.id),
+        ...initialZones.map(z => z.id),
+        ...initialCoupons.map(c => c.id),
+        ...initialSliders.map(s => s.id)
+      );
+    }
+
+    recordDeletedId(...idsToTombstone);
+
+    // Wipe Firestore cloud collections if any data was uploaded
+    try {
+      await wipeAllFirestoreCollections(wipeCatalog);
+    } catch (e) {
+      console.warn('Wipe firestore collections warning:', e);
+    }
+  };
+
+  // Restore sample demo data for test evaluation mode
+  const handleLoadDemoData = () => {
+    localStorage.setItem('durgapur_demo_mode', 'true');
+    localStorage.removeItem('durgapur_production_handover');
+    localStorage.removeItem('durgapur_production_handover_wipe_catalog');
+    localStorage.removeItem('durgapur_deleted_ids');
+
+    setCategories(initialCategories);
+    setSubCategories(initialSubCategories);
+    setZones(initialZones);
+    setCoupons(initialCoupons);
+    setSliders(initialSliders);
+    setServices(initialServices);
+    setOrders(initialOrders);
+    setUsers(initialUsers);
+    setProviders(initialProviders);
+    setReviews(initialReviews);
+    setPayments(initialPayments);
+    setWithdrawals(initialWithdrawals);
+    setNotifications(initialNotifications);
+    setLoginLogs(initialLoginLogs);
+
+    localStorage.setItem('durgapur_categories', JSON.stringify(initialCategories));
+    localStorage.setItem('durgapur_subcategories', JSON.stringify(initialSubCategories));
+    localStorage.setItem('durgapur_zones', JSON.stringify(initialZones));
+    localStorage.setItem('durgapur_coupons', JSON.stringify(initialCoupons));
+    localStorage.setItem('durgapur_sliders', JSON.stringify(initialSliders));
+    localStorage.setItem('durgapur_services', JSON.stringify(initialServices));
+    localStorage.setItem('durgapur_orders', JSON.stringify(initialOrders));
+    localStorage.setItem('durgapur_users', JSON.stringify(initialUsers));
+    localStorage.setItem('durgapur_providers', JSON.stringify(initialProviders));
+    localStorage.setItem('durgapur_reviews', JSON.stringify(initialReviews));
+    localStorage.setItem('durgapur_payments', JSON.stringify(initialPayments));
+    localStorage.setItem('durgapur_withdrawals', JSON.stringify(initialWithdrawals));
+    localStorage.setItem('durgapur_notifications', JSON.stringify(initialNotifications));
+    localStorage.setItem('durgapur_loginlogs', JSON.stringify(initialLoginLogs));
   };
 
   // Auth triggers
@@ -659,6 +865,16 @@ export default function App() {
           settings={settings}
           onChangePhoto={() => openPhotoModal('session', session.id, session.name, session.avatar || DEFAULT_MAN_AVATAR)}
           onUpdateSettings={(updatedSettings) => updateAndPersist('settings', updatedSettings, setSettings)}
+          onProductionHandover={handleProductionHandover}
+          onLoadDemoData={handleLoadDemoData}
+          dataCounts={{
+            orders: orders.length,
+            users: users.length + appUsers.length,
+            providers: providers.length,
+            categories: categories.length,
+            services: services.length,
+            sliders: sliders.length
+          }}
           fullAppData={{
             categories,
             subcategories: subCategories,

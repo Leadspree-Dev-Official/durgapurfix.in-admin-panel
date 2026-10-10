@@ -2,72 +2,53 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper: Identify Admin accounts (includes both durgapurfix@gmail.com and aniruddha295@gmail.com)
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == "durgapurfix@gmail.com" ||
+        request.auth.token.email == "aniruddha295@gmail.com" ||
+        request.auth.token.email == "admin@durgapurfix.com" ||
+        (request.auth.token.email != null && request.auth.token.email.matches('.*@durgapurfix\\..*'))
+      );
+    }
+
     // 1. Web & Mobile Service Catalogs
-    match /categories/{categoryId} {
-      allow read, write: if true;
-    }
-    match /durgapur_categories/{categoryId} {
-      allow read, write: if true;
-    }
-    match /subcategories/{subcategoryId} {
-      allow read, write: if true;
-    }
-    match /services/{serviceId} {
-      allow read, write: if true;
-    }
-    match /zones/{zoneId} {
-      allow read, write: if true;
-    }
-    match /coupons/{couponId} {
-      allow read, write: if true;
-    }
-    match /sliders/{sliderId} {
-      allow read, write: if true;
-    }
-    match /durgapur_sliders/{sliderId} {
-      allow read, write: if true;
-    }
+    match /categories/{categoryId} { allow read, write: if true; }
+    match /subcategories/{subcategoryId} { allow read, write: if true; }
+    match /services/{serviceId} { allow read, write: if true; }
+    match /zones/{zoneId} { allow read, write: if true; }
+    match /coupons/{couponId} { allow read, write: if true; }
+    match /sliders/{sliderId} { allow read, write: if true; }
+    match /providers/{providerId} { allow read, write: if true; }
+    match /users/{userId} { allow read, write: if true; }
+    match /settings/{settingId} { allow read, write: if true; }
+    match /reviews/{reviewId} { allow read, write: if true; }
+    match /payments/{paymentId} { allow read, write: if true; }
+    match /withdrawals/{withdrawalId} { allow read, write: if true; }
+    match /notifications/{notificationId} { allow read, write: if true; }
+    match /loginlogs/{logId} { allow read, write: if true; }
 
-    // 2. Orders & Customer Bookings
-    match /orders/{orderId} {
-      allow read, write: if true;
-    }
-    match /durgapur_bookings/{bookingId} {
-      allow read, write: if true;
-    }
-    match /bookings/{bookingId} {
-      allow read, write: if true;
-    }
-    match /durgapur_orders/{orderId} {
-      allow read, write: if true;
-    }
+    // 2. Orders & Bookings (All Web and Mobile Aliases)
+    match /orders/{orderId} { allow read, write: if true; }
+    match /bookings/{bookingId} { allow read, write: if true; }
+    match /durgapur_orders/{orderId} { allow read, write: if true; }
+    match /durgapur_bookings/{bookingId} { allow read, write: if true; }
 
-    // 3. Service Providers & Technicians
-    match /providers/{providerId} {
-      allow read, write: if true;
-    }
-    match /durgapur_professionals/{providerId} {
-      allow read, write: if true;
-    }
+    // 3. Android Mobile App Collections (Durgapur Homes & Fix)
+    match /durgapur_categories/{categoryId} { allow read, write: if true; }
+    match /durgapur_professionals/{profId} { allow read, write: if true; }
+    match /durgapur_sliders/{sliderId} { allow read, write: if true; }
 
-    // 4. Users, Notifications & System Settings
-    match /users/{userId} {
-      allow read, write: if true;
-    }
+    // 4. Android App User Accounts
+    // Allows mobile app signups (self-registration) and admin management/sync
     match /durgapur_users/{userId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if true;
     }
-    match /notifications/{notificationId} {
-      allow read, write: if true;
-    }
-    match /push_notifications/{notificationId} {
-      allow read, write: if true;
-    }
-    match /settings/{settingId} {
-      allow read, write: if true;
-    }
-    match /appointment_slots/{slotId} {
-      allow read, write: if true;
-    }
+
+    // 5. Connectivity & Health Check Diagnostics
+    match /_connection_test/{docId} { allow read, write: if true; }
+    match /test/{docId} { allow read, write: if true; }
   }
 }
