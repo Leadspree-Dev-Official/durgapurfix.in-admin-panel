@@ -475,6 +475,8 @@ export default function App() {
 
       unsubs.push(subscribeToCollection<UserNotification>('notifications', handleNotificationUpdate));
       unsubs.push(subscribeToCollection<UserNotification>('push_notifications', handleNotificationUpdate));
+      unsubs.push(subscribeToCollection<UserNotification>('durgapur_notifications', handleNotificationUpdate));
+      unsubs.push(subscribeToCollection<UserNotification>('app_notifications', handleNotificationUpdate));
 
       try {
         const unsubSettings = onSnapshot(
@@ -551,6 +553,11 @@ export default function App() {
                   prevItem.uid
                 );
                 removeDocFromFirestore(key, String(prevItem.id)).catch(() => {});
+                if (key === 'notifications') {
+                  removeDocFromFirestore('push_notifications', String(prevItem.id)).catch(() => {});
+                  removeDocFromFirestore('durgapur_notifications', String(prevItem.id)).catch(() => {});
+                  removeDocFromFirestore('app_notifications', String(prevItem.id)).catch(() => {});
+                }
               }
             });
           }
@@ -566,6 +573,11 @@ export default function App() {
       data.forEach(item => {
         if (item && item.id) {
           syncDocToFirestore(key, item.id, item).catch(() => {});
+          if (key === 'notifications') {
+            syncDocToFirestore('push_notifications', item.id, item).catch(() => {});
+            syncDocToFirestore('durgapur_notifications', item.id, item).catch(() => {});
+            syncDocToFirestore('app_notifications', item.id, item).catch(() => {});
+          }
         }
       });
     } else if (db && key === 'settings') {

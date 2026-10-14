@@ -68,18 +68,42 @@ export default function PushNotificationCenter({
       finalTargetName = targetName || 'Selected Recipient';
     }
 
+    const nowIso = new Date().toISOString();
+    const cleanTitle = title.trim();
+    const cleanMessage = message.trim();
+
+    const isPromo = cleanTitle.toLowerCase().includes('off') ||
+                    cleanTitle.toLowerCase().includes('offer') ||
+                    cleanTitle.toLowerCase().includes('discount') ||
+                    cleanTitle.toLowerCase().includes('deal') ||
+                    cleanTitle.toLowerCase().includes('sale') ||
+                    cleanMessage.toLowerCase().includes('offer') ||
+                    cleanMessage.toLowerCase().includes('discount');
+
+    const defaultScreen = actionUrl ? actionUrl.replace(/^\//, '') : 'notifications';
+
     const newNotification: UserNotification = {
       id: 'notif-' + Date.now(),
-      title: title.trim(),
-      message: message.trim(),
+      title: cleanTitle,
+      heading: cleanTitle,
+      message: cleanMessage,
+      body: cleanMessage,
+      text: cleanMessage,
       targetType,
       targetName: finalTargetName,
+      audience: targetType === 'all_users' ? 'all' : targetType,
+      tag: isPromo ? 'OFFER' : (targetType === 'all_providers' ? 'OPERATIONAL' : 'GENERAL'),
+      type: isPromo ? 'promotions' : targetType,
+      targetScreen: defaultScreen,
+      screen: defaultScreen,
       targetZone: targetType === 'zone' ? targetZone : undefined,
       imageUrl: imageUrl || undefined,
       actionUrl: actionUrl || undefined,
       priority,
       sender: currentUserEmail || 'Admin Operations Desk',
-      date: new Date().toISOString().split('T')[0],
+      date: nowIso.split('T')[0],
+      createdAt: nowIso,
+      timestamp: Date.now(),
       status: 'sent'
     };
 
@@ -87,10 +111,14 @@ export default function PushNotificationCenter({
     const updatedList = [newNotification, ...notifications];
     onUpdateNotifications(updatedList);
 
-    // 2. Persist directly to Firestore collection 'notifications' and 'push_notifications'
+    // 2. Persist directly to Firestore collections listened by mobile & web apps
     try {
-      await syncDocToFirestore('notifications', newNotification.id, newNotification);
-      await syncDocToFirestore('push_notifications', newNotification.id, newNotification);
+      await Promise.allSettled([
+        syncDocToFirestore('notifications', newNotification.id, newNotification),
+        syncDocToFirestore('push_notifications', newNotification.id, newNotification),
+        syncDocToFirestore('durgapur_notifications', newNotification.id, newNotification),
+        syncDocToFirestore('app_notifications', newNotification.id, newNotification)
+      ]);
     } catch (err) {
       console.warn('Notification Firestore sync warning:', err);
     }
@@ -112,8 +140,12 @@ export default function PushNotificationCenter({
     const filtered = notifications.filter(n => n.id !== id);
     onUpdateNotifications(filtered);
     try {
-      await removeDocFromFirestore('notifications', id);
-      await removeDocFromFirestore('push_notifications', id);
+      await Promise.allSettled([
+        removeDocFromFirestore('notifications', id),
+        removeDocFromFirestore('push_notifications', id),
+        removeDocFromFirestore('durgapur_notifications', id),
+        removeDocFromFirestore('app_notifications', id)
+      ]);
     } catch (e) {}
   };
 

@@ -234,12 +234,22 @@ export interface UserNotification {
   targetName?: string;
   targetZone?: string;
   title: string;
+  heading?: string;
   message: string;
+  body?: string;
+  text?: string;
   imageUrl?: string;
   actionUrl?: string;
   priority?: 'normal' | 'high' | 'urgent';
   sender: string;
   date: string;
+  createdAt?: string;
+  timestamp?: number;
+  tag?: string;
+  type?: string;
+  targetScreen?: string;
+  screen?: string;
+  audience?: string;
   status?: 'sent' | 'scheduled';
 }
 

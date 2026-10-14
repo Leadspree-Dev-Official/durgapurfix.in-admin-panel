@@ -134,13 +134,27 @@ export default function UsersView({
     e.preventDefault();
     if (!notifTitle || !notifMsg) return;
 
+    const nowIso = new Date().toISOString();
     const newNotif: UserNotification = {
-      id: 'not-' + Date.now(),
+      id: 'notif-' + Date.now(),
       targetType: notifTarget,
-      title: notifTitle,
-      message: notifMsg,
+      targetName: notifTarget.replace('_', ' '),
+      title: notifTitle.trim(),
+      heading: notifTitle.trim(),
+      message: notifMsg.trim(),
+      body: notifMsg.trim(),
+      text: notifMsg.trim(),
+      audience: notifTarget === 'all_users' ? 'all' : notifTarget,
+      tag: 'GENERAL',
+      type: notifTarget,
+      targetScreen: 'notifications',
+      screen: 'notifications',
+      priority: 'normal',
       sender: 'Operations Command Office',
-      date: new Date().toISOString().split('T')[0]
+      date: nowIso.split('T')[0],
+      createdAt: nowIso,
+      timestamp: Date.now(),
+      status: 'sent'
     };
 
     onUpdateNotifications([...notifications, newNotif]);

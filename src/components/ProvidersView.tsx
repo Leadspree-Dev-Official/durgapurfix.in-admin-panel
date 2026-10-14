@@ -94,13 +94,27 @@ export default function ProvidersView({
     e.preventDefault();
     if (!notifTitle || !notifMsg) return;
 
+    const nowIso = new Date().toISOString();
     const newNotif: UserNotification = {
-      id: 'not-' + Date.now(),
+      id: 'notif-' + Date.now(),
       targetType: 'all_providers',
-      title: notifTitle,
-      message: notifMsg,
+      targetName: 'All Verified & Active Service Partners',
+      title: notifTitle.trim(),
+      heading: notifTitle.trim(),
+      message: notifMsg.trim(),
+      body: notifMsg.trim(),
+      text: notifMsg.trim(),
+      audience: 'providers',
+      tag: 'OPERATIONAL',
+      type: 'all_providers',
+      targetScreen: 'notifications',
+      screen: 'notifications',
+      priority: 'high',
       sender: 'Platform Quality Assurance Team',
-      date: new Date().toISOString().split('T')[0]
+      date: nowIso.split('T')[0],
+      createdAt: nowIso,
+      timestamp: Date.now(),
+      status: 'sent'
     };
 
     onUpdateNotifications([...notifications, newNotif]);
