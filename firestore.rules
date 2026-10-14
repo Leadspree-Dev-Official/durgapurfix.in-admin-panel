@@ -26,6 +26,9 @@ service cloud.firestore {
     match /payments/{paymentId} { allow read, write: if true; }
     match /withdrawals/{withdrawalId} { allow read, write: if true; }
     match /notifications/{notificationId} { allow read, write: if true; }
+    match /push_notifications/{docId} { allow read, write: if true; }
+    match /durgapur_notifications/{docId} { allow read, write: if true; }
+    match /app_notifications/{docId} { allow read, write: if true; }
     match /loginlogs/{logId} { allow read, write: if true; }
 
     // 2. Orders & Bookings (All Web and Mobile Aliases)

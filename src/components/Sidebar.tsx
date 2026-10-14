@@ -74,18 +74,14 @@ export default function Sidebar({
       id: 'category',
       label: 'Category',
       icon: FolderTree,
-      subMenus: [
-        { label: 'Manage Category', view: 'category' }
-      ],
+      view: 'category',
       allowedRoles: ['admin', 'executive']
     },
     {
       id: 'subcategory',
       label: 'Sub Category',
       icon: Tags,
-      subMenus: [
-        { label: 'Manage Sub Category', view: 'subcategory' }
-      ],
+      view: 'subcategory',
       allowedRoles: ['admin', 'executive']
     },
     {
@@ -139,10 +135,10 @@ export default function Sidebar({
       label: 'Manage User',
       icon: Users,
       subMenus: [
-        { label: 'Active User', view: 'users-active' },
-        { label: 'Banned User', view: 'users-banned' },
         { label: 'All User', view: 'users-all' },
+        { label: 'Active User', view: 'users-active' },
         { label: 'Pending Verification', view: 'users-pending' },
+        { label: 'Banned User', view: 'users-banned' },
         { label: 'Send Notification', view: 'users-notify' }
       ],
       allowedRoles: ['admin', 'executive']
@@ -152,15 +148,15 @@ export default function Sidebar({
       label: 'Manage Provider',
       icon: UserCheck,
       subMenus: [
-        { label: 'KYC Verification', view: 'providers-kyc-verification' },
+        { label: 'All Provider', view: 'providers-all' },
         { label: 'Active Provider', view: 'providers-active' },
-        { label: 'Banned Provider', view: 'providers-banned' },
+        { label: 'KYC Verification', view: 'providers-kyc-verification' },
+        { label: 'KYC Pending', view: 'providers-kyc-pending' },
+        { label: 'KYC Unverified', view: 'providers-kyc-unverified' },
         { label: 'Email Unverified', view: 'providers-email-unverified' },
         { label: 'Mobile Unverified', view: 'providers-mobile-unverified' },
-        { label: 'KYC Unverified', view: 'providers-kyc-unverified' },
-        { label: 'KYC Pending', view: 'providers-kyc-pending' },
         { label: 'With Balance', view: 'providers-with-balance' },
-        { label: 'All Provider', view: 'providers-all' },
+        { label: 'Banned Provider', view: 'providers-banned' },
         { label: 'Notification to All', view: 'providers-notify' }
       ],
       allowedRoles: ['admin', 'executive']
@@ -184,12 +180,12 @@ export default function Sidebar({
       label: 'Payment',
       icon: CreditCard,
       subMenus: [
+        { label: 'All Payment', view: 'payments-all' },
         { label: 'Pending Payment', view: 'payments-pending' },
         { label: 'Approved Payment', view: 'payments-approved' },
         { label: 'Successful Payment', view: 'payments-successful' },
-        { label: 'Rejected Payment', view: 'payments-rejected' },
         { label: 'Initiated Payment', view: 'payments-initiated' },
-        { label: 'All Payment', view: 'payments-all' }
+        { label: 'Rejected Payment', view: 'payments-rejected' }
       ],
       allowedRoles: ['admin']
     },
@@ -413,23 +409,27 @@ export default function Sidebar({
                       </button>
                     )}
 
-                    {/* Render Sub-menus with nice lists if they exist and are open */}
+                    {/* Render Sub-menus with clean left vertical guide line */}
                     {hasSubMenus && isExpanded && isOpen && (
-                      <div className="pl-8 pr-1 py-1 space-y-1 bg-black/10 rounded-lg border-l border-white/20 ml-5" id={`sidebar-submenu-${item.id}`}>
-                        {item.subMenus?.map((sub, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => handleSelectView(sub.view)}
-                            className={`w-full text-left py-1.5 px-3 rounded-lg text-[11px] font-medium transition cursor-pointer ${
-                              activeView === sub.view 
-                                ? 'bg-white/20 text-white font-bold' 
-                                : 'text-blue-200 hover:text-white hover:bg-white/5'
-                            }`}
-                            id={`sidebar-submenu-${item.id}-${idx}`}
-                          >
-                            {sub.label}
-                          </button>
-                        ))}
+                      <div className="ml-5 pl-3 border-l-2 border-white/20 space-y-1 my-1.5" id={`sidebar-submenu-${item.id}`}>
+                        {item.subMenus?.map((sub, idx) => {
+                          const isSubActive = activeView === sub.view;
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => handleSelectView(sub.view)}
+                              className={`w-full text-left py-2 px-3 rounded-xl text-xs font-medium transition flex items-center gap-2.5 cursor-pointer ${
+                                isSubActive 
+                                  ? 'bg-white text-[#106ad2] font-bold shadow-xs' 
+                                  : 'text-blue-100/90 hover:text-white hover:bg-white/10'
+                              }`}
+                              id={`sidebar-submenu-${item.id}-${idx}`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isSubActive ? 'bg-[#106ad2]' : 'bg-blue-300/60'}`} />
+                              <span className="truncate">{sub.label}</span>
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

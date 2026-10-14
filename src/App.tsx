@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, Globe, ArrowUpRight, ArrowLeft, Database, CloudUpload } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { 
   UserSession, UserRole, ServiceCategory, ServiceSubCategory, Zone, 
   Coupon, Slider, Review, ServiceItem, Order, CustomerUser, 
@@ -46,7 +46,15 @@ import { syncDocToFirestore, removeDocFromFirestore, subscribeToCollection, wipe
 const getDeletedIdsSet = (): Set<string> => {
   try {
     const raw = localStorage.getItem('durgapur_deleted_ids');
-    if (raw) return new Set(JSON.parse(raw));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Ensure real notifications (prefixed with notif-) are never blocked by stale tombstones
+      const cleaned = Array.isArray(parsed) ? parsed.filter((id: string) => typeof id === 'string' && !id.startsWith('notif-')) : [];
+      if (cleaned.length !== parsed.length) {
+        localStorage.setItem('durgapur_deleted_ids', JSON.stringify(cleaned));
+      }
+      return new Set(cleaned);
+    }
   } catch (e) {}
   return new Set();
 };
@@ -205,7 +213,7 @@ export default function App() {
                 item.id.startsWith('rev-') || 
                 item.id.startsWith('pay-') ||
                 item.id.startsWith('wdr-') ||
-                item.id.startsWith('notif-') ||
+                (item.id.startsWith('not-') && !item.id.startsWith('notif-')) ||
                 item.id.startsWith('log-')
               )
             );
@@ -444,12 +452,29 @@ export default function App() {
         localStorage.setItem('durgapur_providers', JSON.stringify(filtered));
       }));
 
-      unsubs.push(subscribeToCollection<UserNotification>('notifications', (items) => {
-        const deletedIds = getDeletedIdsSet();
-        const filtered = (items || []).filter(n => !deletedIds.has(String(n.id)));
-        setNotifications(filtered);
-        localStorage.setItem('durgapur_notifications', JSON.stringify(filtered));
-      }));
+      const handleNotificationUpdate = (items: UserNotification[]) => {
+        setNotifications(prev => {
+          const map = new Map<string, UserNotification>();
+          // Existing in state
+          prev.forEach(n => {
+            if (n && n.id) map.set(String(n.id), n);
+          });
+          // New from Firestore
+          (items || []).forEach(n => {
+            if (n && n.id) map.set(String(n.id), n);
+          });
+          const merged = Array.from(map.values()).sort((a, b) => {
+            const timeA = a.id?.replace('notif-', '') || '0';
+            const timeB = b.id?.replace('notif-', '') || '0';
+            return Number(timeB) - Number(timeA);
+          });
+          localStorage.setItem('durgapur_notifications', JSON.stringify(merged));
+          return merged;
+        });
+      };
+
+      unsubs.push(subscribeToCollection<UserNotification>('notifications', handleNotificationUpdate));
+      unsubs.push(subscribeToCollection<UserNotification>('push_notifications', handleNotificationUpdate));
 
       try {
         const unsubSettings = onSnapshot(
@@ -1018,31 +1043,6 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Back to main website durgapurfix.in */}
-            <a
-              href="https://durgapurfix.in"
-              target="_top"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#106ad2] hover:text-blue-800 rounded-xl text-xs font-bold border border-blue-200 transition-colors shadow-2xs group cursor-pointer"
-              title="Return to Main Website (durgapurfix.in)"
-              id="header-back-to-website-btn"
-            >
-              <ArrowLeft className="w-3.5 h-3.5 text-[#106ad2] group-hover:-translate-x-0.5 transition-transform shrink-0" />
-              <span className="hidden sm:inline">durgapurfix.in</span>
-              <span className="sm:hidden text-[10px]">Website</span>
-            </a>
-
-            {/* Direct Cloud Backend / Firebase Sync Button */}
-            <button
-              onClick={() => setActiveView('settings-config')}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer group active:scale-95"
-              title="Cloud Database & Sync Center (durgapurfix-1935c)"
-              id="header-cloud-sync-btn"
-            >
-              <Database className="w-3.5 h-3.5 text-blue-200 group-hover:rotate-12 transition-transform shrink-0" />
-              <span className="hidden md:inline">Cloud Sync</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" title="Connected to Firebase" />
-            </button>
 
             {/* Broom & Sparkles indicator representing premium home services (desktop) */}
             <div className="hidden xl:flex items-center gap-1 bg-blue-50 text-blue-700 px-2.5 py-1.5 rounded-full text-xs font-semibold border border-blue-100 whitespace-nowrap">
