@@ -922,7 +922,7 @@ export default function App() {
           onLoadDemoData={handleLoadDemoData}
           dataCounts={{
             orders: orders.length,
-            users: users.length + appUsers.length,
+            users: new Set([...users.map(u => String(u.id)), ...appUsers.map(u => String(u.id))]).size,
             providers: providers.length,
             categories: categories.length,
             services: services.length,

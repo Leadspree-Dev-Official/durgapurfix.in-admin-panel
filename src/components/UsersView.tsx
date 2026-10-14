@@ -61,9 +61,41 @@ export default function UsersView({
       : <span className={`${base} bg-red-50 text-red-700 border-red-200`}>Banned</span>;
   };
 
-  // Filter users based on submenu Selection
+  // Filter users based on submenu Selection, deduplicating between web & mobile accounts
   const getFilteredUsers = () => {
-    let filtered = [...users, ...appUsers];
+    const userMap = new Map<string, CustomerUser>();
+
+    // 1. First add base web users
+    for (const u of users) {
+      if (u && u.id) {
+        userMap.set(String(u.id), { ...u });
+      }
+    }
+
+    // 2. Overlay mobile app users; merge info if already present
+    for (const au of appUsers) {
+      if (au && au.id) {
+        const id = String(au.id);
+        const existing = userMap.get(id);
+        if (existing) {
+          userMap.set(id, {
+            ...existing,
+            ...au,
+            name: au.name && au.name !== 'App Customer' ? au.name : (existing.name || au.name),
+            email: au.email || existing.email,
+            phone: au.phone || existing.phone,
+            avatar: au.avatar || existing.avatar,
+            ordersCount: Math.max(existing.ordersCount || 0, au.ordersCount || 0),
+            verified: au.verified ?? existing.verified,
+            source: au.source || existing.source || 'app'
+          });
+        } else {
+          userMap.set(id, { ...au });
+        }
+      }
+    }
+
+    let filtered = Array.from(userMap.values());
 
     if (activeView === 'users-pending') {
       filtered = filtered.filter(u => u.source === 'app' && !u.verified);
@@ -76,9 +108,9 @@ export default function UsersView({
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(u => 
-        u.name.toLowerCase().includes(term) ||
+        (u.name || '').toLowerCase().includes(term) ||
         (u.email || '').toLowerCase().includes(term) ||
-        u.phone.includes(searchTerm)
+        (u.phone || '').includes(searchTerm)
       );
     }
 
@@ -209,8 +241,8 @@ export default function UsersView({
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
             {/* Mobile Users Cards (< sm) */}
             <div className="sm:hidden divide-y divide-slate-100" id="users-mobile-cards">
-              {getFilteredUsers().map((u) => (
-                <div key={u.id} className="p-3.5 space-y-2.5 bg-white">
+              {getFilteredUsers().map((u, idx) => (
+                <div key={`user-card-${u.id || idx}`} className="p-3.5 space-y-2.5 bg-white">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <div className="relative shrink-0">
@@ -310,8 +342,8 @@ export default function UsersView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {getFilteredUsers().map((u) => (
-                    <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
+                  {getFilteredUsers().map((u, idx) => (
+                    <tr key={`user-row-${u.id || idx}`} className="hover:bg-slate-50/60 transition-colors">
                       <td className="py-3 px-4 font-extrabold text-slate-800">
                         <div className="flex items-center gap-3">
                           <div className="relative group shrink-0">

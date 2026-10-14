@@ -1513,65 +1513,77 @@ db.collection("orders").addSnapshotListener { snapshot, e ->
           {isPolicy && (
             <div className="space-y-6" id="settings-policy-form">
               {/* Policy Sub-Tabs */}
-              <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-none border border-slate-200 text-xs font-bold">
+              <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-slate-100 rounded-2xl border border-slate-200 text-xs font-bold">
                 <button
                   type="button"
                   onClick={() => setPolicySubTab('help')}
-                  className={`px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 shrink-0 ${
-                    policySubTab === 'help' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                  className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                    policySubTab === 'help' 
+                      ? 'bg-white text-slate-850 shadow-xs border border-slate-200/80 font-extrabold' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
-                  <Headphones className="w-3.5 h-3.5 text-rose-500" />
+                  <Headphones className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                   <span>Help Center & Support</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setPolicySubTab('refund')}
-                  className={`px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 shrink-0 ${
-                    policySubTab === 'refund' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                  className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                    policySubTab === 'refund' 
+                      ? 'bg-white text-slate-850 shadow-xs border border-slate-200/80 font-extrabold' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
-                  <FileCheck className="w-3.5 h-3.5 text-amber-500" />
+                  <FileCheck className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                   <span>Refund Policy</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setPolicySubTab('terms')}
-                  className={`px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 shrink-0 ${
-                    policySubTab === 'terms' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                  className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                    policySubTab === 'terms' 
+                      ? 'bg-white text-slate-850 shadow-xs border border-slate-200/80 font-extrabold' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
-                  <FileText className="w-3.5 h-3.5 text-purple-500" />
+                  <FileText className="w-3.5 h-3.5 text-purple-500 shrink-0" />
                   <span>Terms & Conditions</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setPolicySubTab('privacy')}
-                  className={`px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 shrink-0 ${
-                    policySubTab === 'privacy' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                  className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                    policySubTab === 'privacy' 
+                      ? 'bg-white text-slate-850 shadow-xs border border-slate-200/80 font-extrabold' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                   <span>Privacy Policy</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setPolicySubTab('about')}
-                  className={`px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 shrink-0 ${
-                    policySubTab === 'about' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                  className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                    policySubTab === 'about' 
+                      ? 'bg-white text-slate-850 shadow-xs border border-slate-200/80 font-extrabold' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
-                  <BookOpen className="w-3.5 h-3.5 text-blue-500" />
+                  <BookOpen className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                   <span>About Us</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setPolicySubTab('receipt')}
-                  className={`px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 shrink-0 ${
-                    policySubTab === 'receipt' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                  className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                    policySubTab === 'receipt' 
+                      ? 'bg-white text-slate-850 shadow-xs border border-slate-200/80 font-extrabold' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
-                  <Code2 className="w-3.5 h-3.5 text-indigo-500" />
+                  <Code2 className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                   <span>Invoice Terms</span>
                 </button>
               </div>
