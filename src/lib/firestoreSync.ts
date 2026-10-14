@@ -64,6 +64,10 @@ export async function pushAllSeedDataToFirestore(
     orders: any[];
     users: any[];
     settings: any;
+    appConfigGlobal?: any;
+    packages?: any[];
+    partsCatalog?: any[];
+    promotions?: any[];
   },
   onProgress?: (progress: SyncProgress) => void
 ): Promise<{ success: boolean; totalUploaded: number; error?: string; isPermissionError?: boolean }> {
@@ -72,7 +76,7 @@ export async function pushAllSeedDataToFirestore(
   }
 
   try {
-    const collectionsToSync: { name: string; items: any[]; isSingleDoc?: boolean }[] = [
+    const collectionsToSync: { name: string; items: any[]; isSingleDoc?: boolean; docId?: string }[] = [
       { name: 'categories', items: data.categories },
       { name: 'durgapur_categories', items: data.categories },
       { name: 'subcategories', items: data.subcategories },
@@ -88,7 +92,11 @@ export async function pushAllSeedDataToFirestore(
       { name: 'bookings', items: data.orders },
       { name: 'users', items: data.users },
       { name: 'durgapur_users', items: data.users },
-      { name: 'settings', items: [data.settings], isSingleDoc: true }
+      { name: 'settings', items: [data.settings], isSingleDoc: true, docId: 'global' },
+      ...(data.appConfigGlobal ? [{ name: 'app_config', items: [data.appConfigGlobal], isSingleDoc: true, docId: 'global' }] : []),
+      ...(data.packages && data.packages.length > 0 ? [{ name: 'packages', items: data.packages }] : []),
+      ...(data.partsCatalog && data.partsCatalog.length > 0 ? [{ name: 'parts_catalog', items: data.partsCatalog }] : []),
+      ...(data.promotions && data.promotions.length > 0 ? [{ name: 'promotions', items: data.promotions }] : [])
     ];
 
     let totalItems = collectionsToSync.reduce((acc, c) => acc + c.items.length, 0);
@@ -104,7 +112,8 @@ export async function pushAllSeedDataToFirestore(
       }
 
       if (group.isSingleDoc) {
-        const docRef = doc(db, 'settings', 'global');
+        const targetDocId = group.docId || 'global';
+        const docRef = doc(db, group.name, targetDocId);
         const cleanedSettings = cleanForFirestore(group.items[0]);
         await setDoc(docRef, cleanedSettings, { merge: true });
         completedCount++;

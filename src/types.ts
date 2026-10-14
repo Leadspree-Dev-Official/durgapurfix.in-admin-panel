@@ -307,3 +307,104 @@ export interface SystemSettings {
     keywords: string;
   };
 }
+
+// Dynamic Android App Schema Models
+export interface AppConfigGlobal {
+  version: number;
+  pricing: {
+    platformFee: number;         // default 49
+    checkoutTaxPercent: number;  // default 0
+    invoiceTaxPercent: number;   // default 18
+    priceMarkupPercent: number;  // default 20
+  };
+  wallet: {
+    enabled: boolean;
+    startingBalance: number;     // default 0
+  };
+  otp: {
+    maxAttempts: number;         // default 2
+    windowMinutes: number;       // default 30
+  };
+  booking: {
+    advanceBookingDays: number;  // default 7
+    timeSlots: string[];
+  };
+  ai: {
+    enabled: boolean;
+    model: string;               // e.g. "gemini-2.5-flash"
+    temperature: number;         // 0.7
+    systemPrompt: string;
+    greeting: string;
+    suggestionChips: string[];
+  };
+  features: {
+    wallet: boolean;
+    aiChat: boolean;
+    referrals: boolean;
+    afterSales: boolean;
+    facebookEventsConsole: boolean;
+  };
+  urls: {
+    website: string;
+    terms: string;
+    privacy: string;
+    refundPolicy: string;
+    referralInvite: string;
+  };
+  home: {
+    searchPlaceholders: string[];
+    socialProofLabel: string;
+  };
+  invoice: {
+    prefix: string;
+    numberFormat: string;
+  };
+}
+
+export interface HomePackage {
+  id: string;
+  section: 'most_booked' | 'popular_deals' | 'recommended';
+  title: string;
+  subtitle: string;
+  price: number;
+  originalPrice: number;
+  rating: number;
+  reviews: number;
+  duration: string;
+  imageUrl: string;
+  subServiceId?: string;
+  order: number;
+  active: boolean;
+}
+
+export interface PartCatalogItem {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+  imageUrl: string;
+  active: boolean;
+  warrantyMonths?: number;
+}
+
+export interface PromotionItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  imageUrl: string;
+  badgeText: string;
+  actionCategory: string;
+  order: number;
+  active: boolean;
+}
+
+export interface AppAnnouncement {
+  id: string;
+  title: string;
+  message: string;
+  imageUrl?: string;
+  targetScreen?: string;
+  bookingId?: string;
+  active: boolean;
+  createdAt: string;
+}

@@ -249,6 +249,8 @@ export default function Sidebar({
       icon: Settings,
       subMenus: [
         { label: 'General Setting', view: 'settings-general' },
+        { label: 'Android App Config', view: 'settings-android-config' },
+        { label: 'Packages & Catalog', view: 'settings-android-packages' },
         { label: 'Help & Policy Center', view: 'settings-policy' },
         { label: 'Appointment & Slots', view: 'appointment-settings' },
         { label: 'Logo & Favicon', view: 'settings-logo' },

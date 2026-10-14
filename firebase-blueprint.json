@@ -146,6 +146,71 @@
         "currency": { "type": "string" }
       },
       "required": ["appName", "currency"]
+    },
+    "app_config": {
+      "title": "Global Android App Config",
+      "description": "Dynamic pricing, wallet, OTP limits, booking windows, AI assistant prompts, and feature flags",
+      "type": "object",
+      "properties": {
+        "version": { "type": "number" },
+        "pricing": { "type": "object" },
+        "wallet": { "type": "object" },
+        "otp": { "type": "object" },
+        "booking": { "type": "object" },
+        "ai": { "type": "object" },
+        "features": { "type": "object" },
+        "urls": { "type": "object" },
+        "home": { "type": "object" }
+      },
+      "required": ["version", "pricing", "wallet", "booking"]
+    },
+    "packages": {
+      "title": "Home Deal Packages",
+      "description": "Most booked, popular deals, and recommended package cards on Android home",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "section": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "price": { "type": "number" },
+        "originalPrice": { "type": "number" },
+        "rating": { "type": "number" },
+        "reviews": { "type": "number" },
+        "duration": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "order": { "type": "number" },
+        "active": { "type": "boolean" }
+      },
+      "required": ["id", "title", "price", "section"]
+    },
+    "parts_catalog": {
+      "title": "Spare Parts Catalog",
+      "description": "Dynamic appliance repair spare parts and transparent pricing list",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "active": { "type": "boolean" }
+      },
+      "required": ["id", "name", "price", "category"]
+    },
+    "promotions": {
+      "title": "Promotions Feed",
+      "description": "Seasonal offers and banner announcements for Android feed",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "badgeText": { "type": "string" },
+        "active": { "type": "boolean" }
+      },
+      "required": ["id", "title", "imageUrl"]
     }
   },
   "securityRules": {
@@ -215,6 +280,34 @@
       },
       {
         "path": "/settings/{settingId}",
+        "allow": {
+          "read": "true",
+          "write": "true"
+        }
+      },
+      {
+        "path": "/app_config/{configId}",
+        "allow": {
+          "read": "true",
+          "write": "true"
+        }
+      },
+      {
+        "path": "/packages/{pkgId}",
+        "allow": {
+          "read": "true",
+          "write": "true"
+        }
+      },
+      {
+        "path": "/parts_catalog/{partId}",
+        "allow": {
+          "read": "true",
+          "write": "true"
+        }
+      },
+      {
+        "path": "/promotions/{promoId}",
         "allow": {
           "read": "true",
           "write": "true"

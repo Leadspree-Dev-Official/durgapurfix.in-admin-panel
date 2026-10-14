@@ -13,7 +13,11 @@ import {
   WithdrawalRequest, 
   UserNotification, 
   LoginLog, 
-  SystemSettings 
+  SystemSettings,
+  AppConfigGlobal,
+  HomePackage,
+  PartCatalogItem,
+  PromotionItem
 } from './types';
 
 export const initialCategories: ServiceCategory[] = [
@@ -806,3 +810,197 @@ export const defaultSettings: SystemSettings = {
     keywords: 'Durgapur, Home Services, Plumber Durgapur, AC repair Durgapur, Beautician Durgapur, Cleaner Durgapur'
   }
 };
+
+export const defaultAppConfigGlobal: AppConfigGlobal = {
+  version: 1,
+  pricing: {
+    platformFee: 49,
+    checkoutTaxPercent: 0,
+    invoiceTaxPercent: 18,
+    priceMarkupPercent: 20
+  },
+  wallet: {
+    enabled: true,
+    startingBalance: 0
+  },
+  otp: {
+    maxAttempts: 2,
+    windowMinutes: 30
+  },
+  booking: {
+    advanceBookingDays: 7,
+    timeSlots: [
+      '08:00 AM - 10:00 AM',
+      '10:00 AM - 12:00 PM',
+      '12:00 PM - 02:00 PM',
+      '02:00 PM - 04:00 PM',
+      '04:00 PM - 06:00 PM',
+      '06:00 PM - 08:00 PM'
+    ]
+  },
+  ai: {
+    enabled: true,
+    model: 'gemini-2.5-flash',
+    temperature: 0.7,
+    systemPrompt: 'You are DurgapurFix AI assistant. Help customers diagnose household repair issues, suggest appropriate local home services in Durgapur, provide transparent pricing estimations, and guide them through booking.',
+    greeting: 'Hello! I am your DurgapurFix Home Care Assistant. What repair or home service can I help you with today?',
+    suggestionChips: [
+      'AC Cooling Issue',
+      'Water Pipe Leakage',
+      'Switchboard Sparking',
+      'Deep Home Cleaning',
+      'Ceiling Fan Repair'
+    ]
+  },
+  features: {
+    wallet: true,
+    aiChat: true,
+    referrals: true,
+    afterSales: true,
+    facebookEventsConsole: false
+  },
+  urls: {
+    website: 'https://durgapurfix.in',
+    terms: 'https://durgapurfix.in/terms',
+    privacy: 'https://durgapurfix.in/privacy',
+    refundPolicy: 'https://durgapurfix.in/refund',
+    referralInvite: 'https://durgapurfix.in/download'
+  },
+  home: {
+    searchPlaceholders: [
+      'Search "AC Servicing"',
+      'Search "Plumber"',
+      'Search "House Cleaning"',
+      'Search "Electrician"',
+      'Search "Beautician"'
+    ],
+    socialProofLabel: 'Trusted by 5,000+ Durgapur homes'
+  },
+  invoice: {
+    prefix: 'INV-DH',
+    numberFormat: 'INV-DH-{YYYY}-{ID}'
+  }
+};
+
+export const initialPackages: HomePackage[] = [
+  {
+    id: 'pkg-1',
+    section: 'most_booked',
+    title: 'AC Power Jet Servicing',
+    subtitle: 'Deep indoor & outdoor jet clean with 30-day cooling guarantee',
+    price: 499,
+    originalPrice: 699,
+    rating: 4.8,
+    reviews: 342,
+    duration: '45 mins',
+    imageUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&auto=format&fit=crop&q=80',
+    subServiceId: 'sub-1',
+    order: 1,
+    active: true
+  },
+  {
+    id: 'pkg-2',
+    section: 'most_booked',
+    title: 'Full House Deep Cleaning',
+    subtitle: '2 BHK complete sanitization, kitchen degreasing & bathroom wash',
+    price: 1899,
+    originalPrice: 2499,
+    rating: 4.9,
+    reviews: 218,
+    duration: '3 hours',
+    imageUrl: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500&auto=format&fit=crop&q=80',
+    order: 2,
+    active: true
+  },
+  {
+    id: 'pkg-3',
+    section: 'popular_deals',
+    title: 'Bathroom Leakage & Tap Fix',
+    subtitle: 'Quick repair of leaky faucets, concealed pipe leaks & flush valve',
+    price: 249,
+    originalPrice: 350,
+    rating: 4.7,
+    reviews: 180,
+    duration: '30 mins',
+    imageUrl: 'https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=500&auto=format&fit=crop&q=80',
+    subServiceId: 'sub-3',
+    order: 1,
+    active: true
+  },
+  {
+    id: 'pkg-4',
+    section: 'recommended',
+    title: 'Ceiling Fan Installation & Repair',
+    subtitle: 'Regulator replacement, coil check, and vibration fixing',
+    price: 199,
+    originalPrice: 299,
+    rating: 4.8,
+    reviews: 412,
+    duration: '25 mins',
+    imageUrl: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=500&auto=format&fit=crop&q=80',
+    order: 1,
+    active: true
+  }
+];
+
+export const initialPartsCatalog: PartCatalogItem[] = [
+  {
+    id: 'part-1',
+    name: 'AC Run Capacitor 45uF / 50uF',
+    price: 450,
+    category: 'AC Mechanic',
+    imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=300&auto=format&fit=crop&q=80',
+    active: true,
+    warrantyMonths: 6
+  },
+  {
+    id: 'part-2',
+    name: 'Brass Concealed Stop Cock Valve 15mm',
+    price: 380,
+    category: 'Plumbing',
+    imageUrl: 'https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=300&auto=format&fit=crop&q=80',
+    active: true,
+    warrantyMonths: 12
+  },
+  {
+    id: 'part-3',
+    name: 'Modular Switch 16A with Indicator',
+    price: 95,
+    category: 'Electrician',
+    imageUrl: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=300&auto=format&fit=crop&q=80',
+    active: true,
+    warrantyMonths: 12
+  },
+  {
+    id: 'part-4',
+    name: 'Ceiling Fan Dual Bearing Set',
+    price: 220,
+    category: 'Electrician',
+    imageUrl: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=300&auto=format&fit=crop&q=80',
+    active: true,
+    warrantyMonths: 6
+  }
+];
+
+export const initialPromotions: PromotionItem[] = [
+  {
+    id: 'promo-1',
+    title: 'Monsoon Home Care Fest',
+    subtitle: 'Flat ₹150 OFF on Waterproofing & Deep Cleaning',
+    imageUrl: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&auto=format&fit=crop&q=80',
+    badgeText: 'FLAT ₹150 OFF',
+    actionCategory: 'cat-6',
+    order: 1,
+    active: true
+  },
+  {
+    id: 'promo-2',
+    title: 'Beat The Summer Heat',
+    subtitle: 'AC Servicing + Gas Topup Combo from ₹899',
+    imageUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80',
+    badgeText: 'HOT DEAL',
+    actionCategory: 'cat-1',
+    order: 2,
+    active: true
+  }
+];

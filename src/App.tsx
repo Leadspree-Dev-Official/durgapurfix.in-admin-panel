@@ -4,7 +4,7 @@ import {
   UserSession, UserRole, ServiceCategory, ServiceSubCategory, Zone, 
   Coupon, Slider, Review, ServiceItem, Order, CustomerUser, 
   ServiceProvider, PaymentTransaction, WithdrawalRequest, UserNotification, 
-  LoginLog, SystemSettings 
+  LoginLog, SystemSettings, AppConfigGlobal, HomePackage, PartCatalogItem, PromotionItem 
 } from './types';
 
 // Initial seed datasets
@@ -12,7 +12,8 @@ import {
   initialCategories, initialSubCategories, initialZones, initialCoupons,
   initialSliders, initialReviews, initialServices, initialProviders,
   initialOrders, initialUsers, initialPayments, initialWithdrawals,
-  initialNotifications, initialLoginLogs, defaultSettings
+  initialNotifications, initialLoginLogs, defaultSettings,
+  defaultAppConfigGlobal, initialPackages, initialPartsCatalog, initialPromotions
 } from './data';
 
 // Component Views
@@ -92,6 +93,10 @@ export default function App() {
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
   const [loginLogs, setLoginLogs] = useState<LoginLog[]>([]);
   const [settings, setSettings] = useState<SystemSettings>(defaultSettings);
+  const [appConfigGlobal, setAppConfigGlobal] = useState<AppConfigGlobal>(defaultAppConfigGlobal);
+  const [packages, setPackages] = useState<HomePackage[]>([]);
+  const [partsCatalog, setPartsCatalog] = useState<PartCatalogItem[]>([]);
+  const [promotions, setPromotions] = useState<PromotionItem[]>([]);
 
   // Active View selection state
   const [activeView, setActiveView] = useState('dashboard');
@@ -248,6 +253,10 @@ export default function App() {
     loadOrSeed('notifications', isCleanHandover ? [] : initialNotifications, setNotifications);
     loadOrSeed('loginlogs', isCleanHandover ? [] : initialLoginLogs, setLoginLogs);
     loadOrSeed('settings', defaultSettings, setSettings);
+    loadOrSeed('app_config', defaultAppConfigGlobal, setAppConfigGlobal);
+    loadOrSeed('packages', isWipeCatalog ? [] : initialPackages, setPackages);
+    loadOrSeed('parts_catalog', isWipeCatalog ? [] : initialPartsCatalog, setPartsCatalog);
+    loadOrSeed('promotions', isWipeCatalog ? [] : initialPromotions, setPromotions);
 
     // Retrieve active user session if exists
     const savedSession = localStorage.getItem('durgapur_session');
@@ -300,6 +309,27 @@ export default function App() {
         const filtered = (items || []).filter(i => !deletedIds.has(String(i.id)));
         setServices(filtered);
         localStorage.setItem('durgapur_services', JSON.stringify(filtered));
+      }));
+
+      unsubs.push(subscribeToCollection<HomePackage>('packages', (items) => {
+        const deletedIds = getDeletedIdsSet();
+        const filtered = (items || []).filter(i => !deletedIds.has(String(i.id)));
+        setPackages(filtered);
+        localStorage.setItem('durgapur_packages', JSON.stringify(filtered));
+      }));
+
+      unsubs.push(subscribeToCollection<PartCatalogItem>('parts_catalog', (items) => {
+        const deletedIds = getDeletedIdsSet();
+        const filtered = (items || []).filter(i => !deletedIds.has(String(i.id)));
+        setPartsCatalog(filtered);
+        localStorage.setItem('durgapur_parts_catalog', JSON.stringify(filtered));
+      }));
+
+      unsubs.push(subscribeToCollection<PromotionItem>('promotions', (items) => {
+        const deletedIds = getDeletedIdsSet();
+        const filtered = (items || []).filter(i => !deletedIds.has(String(i.id)));
+        setPromotions(filtered);
+        localStorage.setItem('durgapur_promotions', JSON.stringify(filtered));
       }));
 
       // Unified order normalizer for web and mobile app payloads
@@ -422,14 +452,35 @@ export default function App() {
       }));
 
       try {
-        const unsubSettings = onSnapshot(doc(db, 'settings', 'global'), (docSnap) => {
-          if (docSnap.exists()) {
-            const liveSettings = docSnap.data() as SystemSettings;
-            setSettings(liveSettings);
-            localStorage.setItem('durgapur_settings', JSON.stringify(liveSettings));
+        const unsubSettings = onSnapshot(
+          doc(db, 'settings', 'global'), 
+          (docSnap) => {
+            if (docSnap.exists()) {
+              const liveSettings = docSnap.data() as SystemSettings;
+              setSettings(liveSettings);
+              localStorage.setItem('durgapur_settings', JSON.stringify(liveSettings));
+            }
+          },
+          (err) => {
+            console.warn('Firestore subscription notice (settings/global):', err?.message);
           }
-        });
+        );
         unsubs.push(unsubSettings);
+
+        const unsubAppConfig = onSnapshot(
+          doc(db, 'app_config', 'global'), 
+          (docSnap) => {
+            if (docSnap.exists()) {
+              const liveAppConfig = docSnap.data() as AppConfigGlobal;
+              setAppConfigGlobal(liveAppConfig);
+              localStorage.setItem('durgapur_app_config', JSON.stringify(liveAppConfig));
+            }
+          },
+          (err) => {
+            console.warn('Firestore subscription notice (app_config/global):', err?.message);
+          }
+        );
+        unsubs.push(unsubAppConfig);
       } catch (e) {}
     }
 
@@ -494,6 +545,8 @@ export default function App() {
       });
     } else if (db && key === 'settings') {
       syncDocToFirestore('settings', 'global', data).catch(() => {});
+    } else if (db && key === 'app_config') {
+      syncDocToFirestore('app_config', 'global', data).catch(() => {});
     }
   };
 
@@ -885,8 +938,20 @@ export default function App() {
             providers,
             orders,
             users,
-            settings
+            settings,
+            appConfigGlobal,
+            packages,
+            partsCatalog,
+            promotions
           }}
+          appConfigGlobal={appConfigGlobal}
+          onUpdateAppConfigGlobal={(updated) => updateAndPersist('app_config', updated, setAppConfigGlobal)}
+          packages={packages}
+          onUpdatePackages={(updated) => updateAndPersist('packages', updated, setPackages)}
+          partsCatalog={partsCatalog}
+          onUpdatePartsCatalog={(updated) => updateAndPersist('parts_catalog', updated, setPartsCatalog)}
+          promotions={promotions}
+          onUpdatePromotions={(updated) => updateAndPersist('promotions', updated, setPromotions)}
         />
       );
     }

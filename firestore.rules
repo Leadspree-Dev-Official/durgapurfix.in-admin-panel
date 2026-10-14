@@ -47,7 +47,17 @@ service cloud.firestore {
       allow update, delete: if true;
     }
 
-    // 5. Connectivity & Health Check Diagnostics
+    // 5. Dynamic Android App Architecture
+    match /app_config/{configId} { allow read, write: if true; }
+    match /packages/{pkgId} { allow read, write: if true; }
+    match /parts_catalog/{partId} { allow read, write: if true; }
+    match /promotions/{promoId} { allow read, write: if true; }
+    match /faqs/{faqId} { allow read, write: if true; }
+    match /announcements/{announcementId} { allow read, write: if true; }
+    match /legal_documents/{docId} { allow read, write: if true; }
+    match /app_strings/{strId} { allow read, write: if true; }
+
+    // 6. Connectivity & Health Check Diagnostics
     match /_connection_test/{docId} { allow read, write: if true; }
     match /test/{docId} { allow read, write: if true; }
   }

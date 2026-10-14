@@ -7,7 +7,7 @@ import {
   Layers, BookOpen, Laptop, Radio, Headphones, PhoneCall, MessageSquare, 
   HelpCircle, FileCheck, ExternalLink, Plus, Trash2, Eye, ChevronRight
 } from 'lucide-react';
-import { HelpCenterFAQ, HelpCenterSettings } from '../types';
+import { HelpCenterFAQ, HelpCenterSettings, AppConfigGlobal, HomePackage, PartCatalogItem, PromotionItem } from '../types';
 import { checkBackendConnection, BackendConnectionResult } from '../lib/firebase';
 import { 
   pushAllSeedDataToFirestore, 
@@ -16,9 +16,11 @@ import {
   SyncProgress 
 } from '../lib/firestoreSync';
 import rawFirebaseConfig from '../../firebase-applet-config.json';
+import AndroidConfigView from './AndroidConfigView';
+import PackagesCatalogView from './PackagesCatalogView';
 
 interface SettingsViewProps {
-  activeView: string; // 'settings-general' | 'settings-logo' | 'settings-config' | 'settings-policy' | 'settings-seo'
+  activeView: string; // 'settings-general' | 'settings-android-config' | 'settings-android-packages' | 'settings-logo' | 'settings-config' | 'settings-policy' | 'settings-seo'
   settings: SystemSettings;
   onUpdateSettings: (settings: SystemSettings) => void;
   onChangePhoto?: () => void;
@@ -33,7 +35,19 @@ interface SettingsViewProps {
     orders: any[];
     users: any[];
     settings: any;
+    appConfigGlobal?: any;
+    packages?: any[];
+    partsCatalog?: any[];
+    promotions?: any[];
   };
+  appConfigGlobal?: AppConfigGlobal;
+  onUpdateAppConfigGlobal?: (config: AppConfigGlobal) => void;
+  packages?: HomePackage[];
+  onUpdatePackages?: (packages: HomePackage[]) => void;
+  partsCatalog?: PartCatalogItem[];
+  onUpdatePartsCatalog?: (parts: PartCatalogItem[]) => void;
+  promotions?: PromotionItem[];
+  onUpdatePromotions?: (promotions: PromotionItem[]) => void;
   onProductionHandover?: (wipeCatalog: boolean) => Promise<void>;
   onLoadDemoData?: () => void;
   dataCounts?: {
@@ -52,10 +66,42 @@ export default function SettingsView({
   onUpdateSettings,
   onChangePhoto,
   fullAppData,
+  appConfigGlobal,
+  onUpdateAppConfigGlobal,
+  packages,
+  onUpdatePackages,
+  partsCatalog,
+  onUpdatePartsCatalog,
+  promotions,
+  onUpdatePromotions,
   onProductionHandover,
   onLoadDemoData,
   dataCounts
 }: SettingsViewProps) {
+
+  // If user selected Android App Config
+  if (activeView === 'settings-android-config' && appConfigGlobal && onUpdateAppConfigGlobal) {
+    return (
+      <AndroidConfigView 
+        config={appConfigGlobal} 
+        onUpdateConfig={onUpdateAppConfigGlobal} 
+      />
+    );
+  }
+
+  // If user selected Packages & Catalog
+  if (activeView === 'settings-android-packages' && packages && onUpdatePackages && partsCatalog && onUpdatePartsCatalog && promotions && onUpdatePromotions) {
+    return (
+      <PackagesCatalogView
+        packages={packages}
+        onUpdatePackages={onUpdatePackages}
+        partsCatalog={partsCatalog}
+        onUpdatePartsCatalog={onUpdatePartsCatalog}
+        promotions={promotions}
+        onUpdatePromotions={onUpdatePromotions}
+      />
+    );
+  }
 
   const isGeneral = activeView === 'settings-general';
   const isLogo = activeView === 'settings-logo';
